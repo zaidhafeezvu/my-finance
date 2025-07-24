@@ -32,17 +32,19 @@ graph TB
         K[Investment Service]
         L[Bill Service]
         M[Report Service]
+        N[Goal Service]
+        O[Notification Service]
     end
     
     subgraph "Data Layer"
-        N[MongoDB]
-        O[Redis Cache]
+        P[MongoDB]
+        Q[Redis Cache]
     end
     
     subgraph "External Services"
-        P[Plaid API]
-        Q[Email Service]
-        R[Market Data API]
+        R[Plaid API]
+        S[Email Service]
+        T[Market Data API]
     end
     
     A --> D
@@ -55,17 +57,25 @@ graph TB
     F --> K
     F --> L
     F --> M
-    G --> N
+    F --> N
+    G --> P
     H --> P
-    I --> N
-    J --> N
-    K --> R
+    I --> P
+    J --> P
+    K --> P
+    L --> P
+    M --> P
+    N --> P
+    H --> R
+    K --> T
     L --> Q
-    M --> N
+    O --> S
     D --> O
 ```
 
 ### Monorepo Structure
+
+The monorepo structure is designed to support efficient development and deployment with clear separation of concerns:
 
 ```
 finance-app/
@@ -81,6 +91,10 @@ finance-app/
 └── README.md
 ```
 
+**Design Rationale**: The monorepo structure enables code sharing between client and server while maintaining clear boundaries. Turborepo provides efficient caching and parallel execution, reducing build times and improving developer experience. The shared packages ensure type safety and consistency across the application.
+
+
+
 ## Components and Interfaces
 
 ### Frontend Components
@@ -92,13 +106,15 @@ finance-app/
 - **Sidebar**: Collapsible sidebar for secondary navigation
 
 #### Feature Components
-- **AccountList**: Display and manage connected financial accounts
-- **TransactionTable**: Searchable, filterable transaction list with pagination
-- **BudgetCard**: Individual budget display with progress indicators
-- **InvestmentPortfolio**: Portfolio overview with charts and performance metrics
-- **BillTracker**: Upcoming bills and payment status
-- **ReportGenerator**: Interactive report creation and visualization
-- **GoalTracker**: Financial goal progress and management
+- **AccountList**: Display and manage connected financial accounts with sync status
+- **TransactionTable**: Searchable, filterable transaction list with pagination and categorization
+- **BudgetCard**: Individual budget display with progress indicators and threshold alerts
+- **InvestmentPortfolio**: Portfolio overview with charts, performance metrics, and asset allocation
+- **BillTracker**: Upcoming bills, payment status, and overdue bill highlighting
+- **ReportGenerator**: Interactive report creation with customizable date ranges and export options
+- **GoalTracker**: Financial goal progress, milestone tracking, and achievement celebrations
+- **NotificationCenter**: In-app notification management with read/unread status
+- **SecurityDashboard**: Security settings, MFA configuration, and activity monitoring
 
 #### Shared UI Components
 - **DataTable**: Reusable table component with sorting, filtering, and pagination
@@ -147,8 +163,12 @@ interface BudgetService {
   updateBudgetProgress(userId: string, budgetId: string): Promise<Budget>
   getBudgetStatus(userId: string): Promise<BudgetStatus[]>
   generateBudgetReport(userId: string, period: DateRange): Promise<BudgetReport>
+  sendBudgetNotifications(userId: string, budgetId: string): Promise<void>
+  checkBudgetThresholds(userId: string): Promise<BudgetAlert[]>
 }
 ```
+
+
 
 ## Data Models
 
@@ -171,8 +191,15 @@ interface User {
   }
   security: {
     mfaEnabled: boolean
+    mfaSecret?: string
+    backupCodes?: string[]
     lastLogin: Date
     loginAttempts: number
+    lockedUntil?: Date
+    securityQuestions?: {
+      question: string
+      answerHash: string
+    }[]
   }
   createdAt: Date
   updatedAt: Date
@@ -262,6 +289,8 @@ interface Investment {
   lastUpdated: Date
 }
 ```
+
+
 
 ## Error Handling
 
@@ -356,19 +385,62 @@ describe('TransactionService', () => {
 - **Encryption at Rest**: AES-256 encryption for sensitive data in MongoDB
 - **Encryption in Transit**: TLS 1.3 for all API communications
 - **API Security**: Rate limiting, CORS configuration, and input sanitization
-- **Authentication**: JWT tokens with refresh token rotation
+- **Authentication**: JWT tokens with refresh token rotation and secure session management
 - **Authorization**: Role-based access control with granular permissions
+- **Multi-Factor Authentication**: TOTP and SMS-based MFA with backup codes
+- **Password Security**: Bcrypt hashing with salt rounds and password complexity requirements
+
+#### Session Management
+- **Session Timeout**: Automatic session expiration after inactivity periods
+- **Concurrent Session Control**: Limit number of active sessions per user
+- **Session Invalidation**: Immediate session termination on security events
+- **Device Tracking**: Monitor and alert on new device logins
 
 #### Compliance
-- **PCI DSS**: Compliance for handling financial data
-- **GDPR**: Data privacy and user consent management
-- **SOC 2**: Security controls and audit requirements
-- **Bank-Level Security**: Following financial industry security standards
+- **PCI DSS**: Compliance for handling financial data with secure data transmission
+- **GDPR**: Data privacy, user consent management, and right to deletion
+- **SOC 2**: Security controls, audit requirements, and data integrity
+- **Bank-Level Security**: Following financial industry security standards and best practices
 
 #### Monitoring and Logging
-- **Security Event Logging**: Comprehensive audit trail for all financial operations
-- **Anomaly Detection**: Automated detection of suspicious activities
-- **Performance Monitoring**: Application performance and uptime tracking
-- **Error Tracking**: Centralized error logging and alerting
+- **Security Event Logging**: Comprehensive audit trail for all financial operations and user activities
+- **Anomaly Detection**: Automated detection of suspicious activities and login patterns
+- **Performance Monitoring**: Application performance, uptime tracking, and resource utilization
+- **Error Tracking**: Centralized error logging, alerting, and incident response
+- **Data Access Logging**: Track all access to sensitive financial data with timestamps and user identification
+
+### Development and Deployment Considerations
+
+#### Turborepo Integration
+- **Parallel Execution**: Turborepo enables parallel building and testing of packages, significantly reducing development cycle times
+- **Intelligent Caching**: Build artifacts are cached based on content hashing, avoiding unnecessary rebuilds
+- **Dependency Management**: Shared dependencies are managed efficiently across packages with workspace hoisting
+- **Development Workflow**: Single command development setup with concurrent client and server execution
+
+**Design Rationale**: The Turborepo integration addresses Requirement 10 by providing efficient development workflows, optimized builds, and proper dependency management across the monorepo structure.
+
+#### Data Consistency and Integrity
+- **Transaction Atomicity**: Database operations use MongoDB transactions to ensure data consistency
+- **Duplicate Detection**: Advanced algorithms detect and flag duplicate transactions across accounts
+- **Data Validation**: Comprehensive input validation at both API and database levels
+- **Audit Trail**: Complete audit logging for all financial data modifications
+
+**Design Rationale**: These measures ensure data integrity and provide the reliability required for financial applications, addressing the critical nature of financial data accuracy.
+
+#### Performance Optimization
+- **Database Indexing**: Strategic indexing on frequently queried fields (userId, date ranges, categories)
+- **Caching Strategy**: Redis caching for frequently accessed data like account balances and recent transactions
+- **Pagination**: Efficient pagination for large datasets like transaction histories
+- **Lazy Loading**: Frontend components implement lazy loading for improved initial load times
+
+**Design Rationale**: Performance optimization ensures the application remains responsive even with large amounts of financial data, providing a smooth user experience.
+
+#### Notification and Alert System
+- **Multi-Channel Delivery**: Notifications delivered via email, in-app, and potentially SMS
+- **Smart Scheduling**: Intelligent scheduling prevents notification spam while ensuring important alerts are delivered
+- **Preference Management**: Granular user control over notification types and delivery methods
+- **Template System**: Flexible template system for consistent notification formatting
+
+**Design Rationale**: The notification system addresses multiple requirements (4.3, 6.2, 8.3) by providing timely, relevant alerts that help users stay on top of their financial goals and obligations.
 
 This design provides a robust foundation for building a comprehensive finance application that meets modern security standards while delivering an excellent user experience through the MERN stack and Turborepo architecture.
