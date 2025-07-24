@@ -2,30 +2,39 @@
 
 - [x] 1. Set up monorepo structure and development environment
 
-
-
-
-
   - Initialize Turborepo with apps/client, apps/server, and packages structure
   - Configure package.json scripts for concurrent development and build processes
   - Set up TypeScript configuration for shared types across packages
   - Create shared package with common types, utilities, and constants
   - _Requirements: 10.1, 10.2, 10.3, 10.4, 10.5_
 
-- [ ] 2. Implement core backend infrastructure
-- [ ] 2.1 Set up Express server with middleware and basic routing
+- [x] 2. Implement core backend infrastructure
+
+
+
+
+
+- [x] 2.1 Set up Express server with middleware and basic routing
+
+
   - Create Express application with CORS, helmet, and security middleware
   - Implement request logging and error handling middleware
   - Set up basic API route structure with versioning
   - _Requirements: 9.1, 9.2_
 
-- [ ] 2.2 Configure MongoDB connection and database utilities
+- [x] 2.2 Configure MongoDB connection and database utilities
+
+
+
   - Set up MongoDB connection with connection pooling and error handling
   - Create database connection utilities and health check endpoints
   - Implement database seeding scripts for development
   - _Requirements: 9.2_
 
-- [ ] 2.3 Implement authentication system with JWT
+
+
+- [x] 2.3 Implement authentication system with JWT
+
   - Create user registration endpoint with email validation
   - Implement login endpoint with password hashing and JWT generation
   - Build JWT middleware for route protection and token validation
