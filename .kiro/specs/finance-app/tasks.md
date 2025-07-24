@@ -34,14 +34,26 @@
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 9.3, 9.4_
 
 - [ ] 3. Build user management and profile system
-- [ ] 3.1 Create User model and database schema
+- [x] 3.1 Create User model and database schema
+
+
   - Define User schema with validation rules and indexes
   - Implement user CRUD operations with proper error handling
   - Create user profile update endpoints with validation
   - Write unit tests for user model and operations
   - _Requirements: 1.1, 1.5, 9.5_
 
-- [ ] 3.2 Implement user preferences and settings management
+- [ ] 3.2 Create core data models and schemas
+  - Create Account model with Plaid integration fields and validation
+  - Implement Transaction model with categorization and tagging support
+  - Build Budget model with progress tracking and notification settings
+  - Create Investment model for portfolio tracking and performance metrics
+  - Implement Bill model with recurring payment patterns and status tracking
+  - Create Goal model with target amounts, deadlines, and progress calculation
+  - Write unit tests for all data models and validation logic
+  - _Requirements: 2.1, 3.1, 4.1, 5.1, 6.1, 8.1_
+
+- [ ] 3.3 Implement user preferences and settings management
   - Create endpoints for updating user preferences and notification settings
   - Build preference validation and default value handling
   - Implement timezone and currency preference functionality
@@ -50,17 +62,19 @@
 
 - [ ] 4. Set up React frontend foundation
 - [ ] 4.1 Initialize React application with routing and state management
-  - Set up React application with TypeScript and essential dependencies
-  - Configure React Router for client-side routing
+  - Configure React Router for client-side routing and navigation
   - Implement Redux Toolkit for state management with authentication slice
-  - Create basic layout components and navigation structure
+  - Create basic layout components (AppLayout, Navigation, Sidebar)
+  - Set up API client with axios for backend communication
+  - Create authentication context and hooks for state management
   - _Requirements: 10.1, 10.2_
 
 - [ ] 4.2 Build authentication UI components and flows
-  - Create login and registration forms with validation
+  - Create login and registration forms with validation using React Hook Form
   - Implement protected route component and authentication guards
-  - Build password reset flow with email verification
-  - Create user profile and settings pages
+  - Build password reset flow with email verification UI
+  - Create user profile and settings pages with preference management
+  - Add loading states and error handling for authentication flows
   - Write component tests for authentication flows
   - _Requirements: 1.1, 1.2, 1.3, 1.4_
 
