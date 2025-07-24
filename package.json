@@ -14,11 +14,11 @@
     "type-check": "turbo run type-check"
   },
   "devDependencies": {
-    "turbo": "^1.10.0",
-    "typescript": "^5.0.0",
-    "@types/node": "^20.0.0"
+    "@types/node": "^20.0.0",
+    "turbo": "2.5.5",
+    "typescript": "^5.0.0"
   },
-  "packageManager": "npm@9.0.0",
+  "packageManager": "bun@1.1.38",
   "engines": {
     "node": ">=18.0.0"
   }

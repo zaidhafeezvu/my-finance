@@ -1,4 +1,5 @@
+$ bun build src/index.ts --outdir dist --target node
+Bundled 178 modules in 232ms
 
-> @finance-app/server@0.1.0 build
-> tsc
+  index.js  0.98 MB  (entry point)
 

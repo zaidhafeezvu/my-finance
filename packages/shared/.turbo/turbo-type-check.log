@@ -1,4 +1,1 @@
-
-> @finance-app/shared@0.1.0 type-check
-> tsc --noEmit
-
+$ tsc --noEmit

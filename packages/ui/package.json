@@ -11,7 +11,7 @@
   },
   "scripts": {
     "build": "tsc",
-    "dev": "tsc --watch",
+    "dev": "bun --watch src/index.ts",
     "lint": "eslint . --ext .ts,.tsx --report-unused-disable-directives --max-warnings 0",
     "type-check": "tsc --noEmit",
     "test": "jest",
