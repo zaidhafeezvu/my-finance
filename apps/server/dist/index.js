@@ -101931,7 +101931,9 @@ class DatabaseConnection {
       try {
         this.connectionAttempts++;
         console.log(`\uD83D\uDD04 Attempting database connection (${this.connectionAttempts}/${this.maxRetries})...`);
-        await import_mongoose2.default.connect(import_config7.databaseConfig.mongodb.uri, {
+        const mongoUri = process.env.MONGODB_URI || import_config7.databaseConfig.mongodb.uri;
+        console.log(`\uD83D\uDD17 Connecting to: ${mongoUri.includes("mongodb+srv") ? "MongoDB Atlas" : "Local MongoDB"}`);
+        await import_mongoose2.default.connect(mongoUri, {
           ...import_config7.databaseConfig.mongodb.options,
           bufferCommands: false
         });
@@ -102488,7 +102490,7 @@ router4.get("/api", (req, res) => {
 });
 
 // src/index.ts
-import_dotenv.default.config();
+import_dotenv.default.config({ path: "../../.env" });
 var app = import_express5.default();
 var port = import_config10.appConfig.port;
 app.set("trust proxy", 1);

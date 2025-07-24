@@ -272,7 +272,7 @@ class AuthService {
 
     return jwt.sign(payload, authConfig.jwt.secret, {
       expiresIn: authConfig.jwt.expiresIn
-    })
+    } as jwt.SignOptions)
   }
 
   // Generate refresh token
@@ -285,7 +285,7 @@ class AuthService {
 
     return jwt.sign(payload, authConfig.jwt.secret, {
       expiresIn: authConfig.jwt.refreshExpiresIn
-    })
+    } as jwt.SignOptions)
   }
 
   // Verify access token

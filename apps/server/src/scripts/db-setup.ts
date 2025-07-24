@@ -56,7 +56,7 @@ async function setupDatabase() {
 }
 
 // Run if called directly
-if (import.meta.main) {
+if (require.main === module) {
   setupDatabase()
 }
 
