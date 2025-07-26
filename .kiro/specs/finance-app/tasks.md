@@ -33,9 +33,9 @@
   - Write unit tests for authentication service
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 9.3, 9.4_
 
-- [ ] 3. Build user management and profile system
-- [x] 3.1 Create User model and database schema
+- [-] 3. Build user management and profile system
 
+- [x] 3.1 Create User model and database schema
 
   - Define User schema with validation rules and indexes
   - Implement user CRUD operations with proper error handling
@@ -43,7 +43,8 @@
   - Write unit tests for user model and operations
   - _Requirements: 1.1, 1.5, 9.5_
 
-- [ ] 3.2 Create core data models and schemas
+- [x] 3.2 Create core data models and schemas
+
   - Create Account model with Plaid integration fields and validation
   - Implement Transaction model with categorization and tagging support
   - Build Budget model with progress tracking and notification settings

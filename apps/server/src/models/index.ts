@@ -1,1 +1,7 @@
 export * from './User.model'
+export * from './Account.model'
+export * from './Transaction.model'
+export * from './Budget.model'
+export * from './Investment.model'
+export * from './Bill.model'
+export * from './Goal.model'
