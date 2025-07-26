@@ -1,10 +1,14 @@
 import { Router } from 'express'
 import { authRoutes } from './auth.routes'
+import { userRoutes } from './user.routes'
 
 const router = Router()
 
 // Authentication routes
 router.use('/auth', authRoutes)
+
+// User management routes
+router.use('/user', userRoutes)
 
 // API v1 root endpoint
 router.get('/', (req, res) => {
@@ -12,7 +16,8 @@ router.get('/', (req, res) => {
     message: 'Finance App API v1',
     version: '1.0.0',
     endpoints: {
-      auth: '/auth'
+      auth: '/auth',
+      user: '/user'
     },
     timestamp: new Date().toISOString()
   })

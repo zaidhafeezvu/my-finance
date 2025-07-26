@@ -54,7 +54,10 @@
   - Write unit tests for all data models and validation logic
   - _Requirements: 2.1, 3.1, 4.1, 5.1, 6.1, 8.1_
 
-- [ ] 3.3 Implement user preferences and settings management
+- [-] 3.3 Implement user preferences and settings management
+
+
+
   - Create endpoints for updating user preferences and notification settings
   - Build preference validation and default value handling
   - Implement timezone and currency preference functionality

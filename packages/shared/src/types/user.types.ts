@@ -24,17 +24,10 @@ export interface UserPreferences {
 }
 
 export interface NotificationSettings {
-  email: {
-    budgetAlerts: boolean
-    billReminders: boolean
-    securityAlerts: boolean
-    weeklyReports: boolean
-  }
-  push: {
-    budgetAlerts: boolean
-    billReminders: boolean
-    securityAlerts: boolean
-  }
+  email: boolean
+  push: boolean
+  budget: boolean
+  bills: boolean
 }
 
 export interface UserSecurity {
@@ -61,4 +54,24 @@ export interface AuthToken {
   accessToken: string
   refreshToken: string
   expiresIn: number
+}
+
+export interface UpdatePreferencesData {
+  currency?: Currency
+  dateFormat?: 'MM/DD/YYYY' | 'DD/MM/YYYY' | 'YYYY-MM-DD'
+  timezone?: Timezone
+  notifications?: Partial<NotificationSettings>
+}
+
+export interface UpdateProfileData {
+  firstName?: string
+  lastName?: string
+  phone?: string
+  timezone?: Timezone
+}
+
+export interface PreferenceOptions {
+  currencies: Currency[]
+  dateFormats: ('MM/DD/YYYY' | 'DD/MM/YYYY' | 'YYYY-MM-DD')[]
+  timezones: Timezone[]
 }
