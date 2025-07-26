@@ -199,7 +199,10 @@ billSchema.methods.calculateNextDueDate = function() {
       }
       break
     case 'custom':
-      // For custom recurrence, add interval as days
+      // For custom recurrence, the interval is treated as days.
+      if (!Number.isInteger(this.recurrence.interval) || this.recurrence.interval <= 0) {
+        throw new Error('Invalid interval for custom recurrence: must be a positive integer representing days.')
+      }
       while (nextDue <= now) {
         nextDue.setDate(nextDue.getDate() + this.recurrence.interval)
       }
