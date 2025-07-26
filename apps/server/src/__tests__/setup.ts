@@ -10,13 +10,17 @@ beforeAll(async () => {
   const mongoUri = mongoServer.getUri()
   
   await mongoose.connect(mongoUri)
-})
+}, 30000) // 30 second timeout
 
 afterAll(async () => {
   // Clean up
-  await mongoose.disconnect()
-  await mongoServer.stop()
-})
+  if (mongoose.connection.readyState !== 0) {
+    await mongoose.disconnect()
+  }
+  if (mongoServer) {
+    await mongoServer.stop()
+  }
+}, 30000) // 30 second timeout
 
 beforeEach(async () => {
   // Clear all collections before each test
