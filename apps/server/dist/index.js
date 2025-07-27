@@ -100054,7 +100054,7 @@ var require_bcrypt = __commonJS((exports, module) => {
 });
 
 // src/index.ts
-var import_express5 = __toESM(require_express2(), 1);
+var import_express6 = __toESM(require_express2(), 1);
 var import_cors = __toESM(require_lib3(), 1);
 
 // ../../node_modules/helmet/index.mjs
@@ -101486,7 +101486,7 @@ var userSchema = new import_mongoose.Schema({
       type: String,
       required: true,
       default: "USD",
-      enum: ["USD", "EUR", "GBP", "CAD", "AUD"]
+      enum: ["USD", "EUR", "GBP", "CAD", "AUD", "JPY", "CHF", "CNY", "INR", "BRL"]
     },
     dateFormat: {
       type: String,
@@ -101510,6 +101510,22 @@ var userSchema = new import_mongoose.Schema({
       bills: {
         type: Boolean,
         default: true
+      },
+      investments: {
+        type: Boolean,
+        default: true
+      },
+      goals: {
+        type: Boolean,
+        default: true
+      },
+      security: {
+        type: Boolean,
+        default: true
+      },
+      marketing: {
+        type: Boolean,
+        default: false
       }
     }
   },
@@ -101621,6 +101637,955 @@ userSchema.statics.findByEmailVerificationToken = function(token) {
   });
 };
 var User = import_mongoose.default.model("User", userSchema);
+// src/models/Account.model.ts
+var import_mongoose2 = __toESM(require_mongoose(), 1);
+var accountSchema = new import_mongoose2.Schema({
+  userId: {
+    type: import_mongoose2.Schema.Types.ObjectId,
+    ref: "User",
+    required: true,
+    index: true
+  },
+  plaidAccountId: {
+    type: String,
+    sparse: true,
+    index: true
+  },
+  institutionName: {
+    type: String,
+    required: true,
+    trim: true,
+    maxlength: 100
+  },
+  accountName: {
+    type: String,
+    required: true,
+    trim: true,
+    maxlength: 100
+  },
+  accountType: {
+    type: String,
+    required: true,
+    enum: ["checking", "savings", "credit", "investment", "loan"]
+  },
+  balance: {
+    current: {
+      type: Number,
+      required: true,
+      default: 0
+    },
+    available: {
+      type: Number
+    },
+    limit: {
+      type: Number
+    }
+  },
+  isActive: {
+    type: Boolean,
+    default: true,
+    index: true
+  },
+  lastSynced: {
+    type: Date,
+    default: Date.now,
+    index: true
+  }
+}, {
+  timestamps: true,
+  toJSON: {
+    transform: function(_doc, ret) {
+      ret._id = ret._id.toString();
+      ret.userId = ret.userId.toString();
+      delete ret.__v;
+      return ret;
+    }
+  }
+});
+accountSchema.index({ userId: 1, accountType: 1 });
+accountSchema.index({ userId: 1, isActive: 1 });
+accountSchema.index({ plaidAccountId: 1 }, { sparse: true });
+accountSchema.index({ lastSynced: 1 });
+accountSchema.statics.findByUser = function(userId) {
+  return this.find({ userId, isActive: true }).sort({ createdAt: -1 });
+};
+accountSchema.statics.findByPlaidId = function(plaidAccountId) {
+  return this.findOne({ plaidAccountId });
+};
+accountSchema.methods.updateBalance = function(balance) {
+  this.balance = balance;
+  this.lastSynced = new Date;
+  return this.save();
+};
+accountSchema.methods.deactivate = function() {
+  this.isActive = false;
+  return this.save();
+};
+var AccountModel = import_mongoose2.default.model("Account", accountSchema);
+// src/models/Transaction.model.ts
+var import_mongoose3 = __toESM(require_mongoose(), 1);
+var transactionSchema = new import_mongoose3.Schema({
+  userId: {
+    type: import_mongoose3.Schema.Types.ObjectId,
+    ref: "User",
+    required: true,
+    index: true
+  },
+  accountId: {
+    type: import_mongoose3.Schema.Types.ObjectId,
+    ref: "Account",
+    required: true,
+    index: true
+  },
+  plaidTransactionId: {
+    type: String,
+    sparse: true,
+    index: true
+  },
+  amount: {
+    type: Number,
+    required: true,
+    validate: {
+      validator: function(value) {
+        return !isNaN(value) && isFinite(value);
+      },
+      message: "Amount must be a valid number"
+    }
+  },
+  description: {
+    type: String,
+    required: true,
+    trim: true,
+    maxlength: 500
+  },
+  merchantName: {
+    type: String,
+    trim: true,
+    maxlength: 200
+  },
+  category: {
+    primary: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 50
+    },
+    detailed: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 100
+    }
+  },
+  date: {
+    type: Date,
+    required: true,
+    index: true
+  },
+  isManual: {
+    type: Boolean,
+    default: false,
+    index: true
+  },
+  tags: [{
+    type: String,
+    trim: true,
+    maxlength: 30
+  }],
+  notes: {
+    type: String,
+    trim: true,
+    maxlength: 1000
+  },
+  isDuplicate: {
+    type: Boolean,
+    default: false,
+    index: true
+  }
+}, {
+  timestamps: true,
+  toJSON: {
+    transform: function(_doc, ret) {
+      ret._id = ret._id.toString();
+      ret.userId = ret.userId.toString();
+      ret.accountId = ret.accountId.toString();
+      delete ret.__v;
+      return ret;
+    }
+  }
+});
+transactionSchema.index({ userId: 1, date: -1 });
+transactionSchema.index({ userId: 1, accountId: 1, date: -1 });
+transactionSchema.index({ userId: 1, "category.primary": 1 });
+transactionSchema.index({ userId: 1, amount: 1 });
+transactionSchema.index({ plaidTransactionId: 1 }, { sparse: true });
+transactionSchema.index({ tags: 1 });
+transactionSchema.index({ isDuplicate: 1 });
+transactionSchema.index({
+  description: "text",
+  merchantName: "text",
+  "category.primary": "text",
+  "category.detailed": "text",
+  notes: "text"
+});
+transactionSchema.statics.findByUserWithFilters = function(userId, filters = {}) {
+  const query = { userId };
+  if (filters.accountIds && filters.accountIds.length > 0) {
+    query.accountId = { $in: filters.accountIds };
+  }
+  if (filters.categories && filters.categories.length > 0) {
+    query["category.primary"] = { $in: filters.categories };
+  }
+  if (filters.dateRange) {
+    query.date = {
+      $gte: filters.dateRange.startDate,
+      $lte: filters.dateRange.endDate
+    };
+  }
+  if (filters.amountRange) {
+    query.amount = {
+      $gte: filters.amountRange.min,
+      $lte: filters.amountRange.max
+    };
+  }
+  if (filters.tags && filters.tags.length > 0) {
+    query.tags = { $in: filters.tags };
+  }
+  if (typeof filters.isManual === "boolean") {
+    query.isManual = filters.isManual;
+  }
+  if (filters.search) {
+    query.$text = { $search: filters.search };
+  }
+  return this.find(query).sort({ date: -1 });
+};
+transactionSchema.statics.findPotentialDuplicates = function(userId, transaction) {
+  const dateRange = {
+    $gte: new Date(transaction.date.getTime() - 24 * 60 * 60 * 1000),
+    $lte: new Date(transaction.date.getTime() + 24 * 60 * 60 * 1000)
+  };
+  return this.find({
+    userId,
+    amount: transaction.amount,
+    date: dateRange,
+    _id: { $ne: transaction._id }
+  });
+};
+transactionSchema.methods.categorize = function(category) {
+  this.category = category;
+  return this.save();
+};
+transactionSchema.methods.addTags = function(newTags) {
+  const uniqueTags = [...new Set([...this.tags, ...newTags])];
+  this.tags = uniqueTags;
+  return this.save();
+};
+transactionSchema.methods.markAsDuplicate = function() {
+  this.isDuplicate = true;
+  return this.save();
+};
+var TransactionModel = import_mongoose3.default.model("Transaction", transactionSchema);
+// src/models/Budget.model.ts
+var import_mongoose4 = __toESM(require_mongoose(), 1);
+var budgetSchema = new import_mongoose4.Schema({
+  userId: {
+    type: import_mongoose4.Schema.Types.ObjectId,
+    ref: "User",
+    required: true,
+    index: true
+  },
+  name: {
+    type: String,
+    required: true,
+    trim: true,
+    maxlength: 100
+  },
+  category: {
+    type: String,
+    required: true,
+    trim: true,
+    maxlength: 50,
+    index: true
+  },
+  limit: {
+    type: Number,
+    required: true,
+    min: 0,
+    validate: {
+      validator: function(value) {
+        return !isNaN(value) && isFinite(value) && value >= 0;
+      },
+      message: "Budget limit must be a positive number"
+    }
+  },
+  period: {
+    type: String,
+    required: true,
+    enum: ["monthly", "weekly", "yearly"]
+  },
+  spent: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+  startDate: {
+    type: Date,
+    required: true,
+    index: true
+  },
+  endDate: {
+    type: Date,
+    required: true,
+    index: true
+  },
+  isActive: {
+    type: Boolean,
+    default: true,
+    index: true
+  },
+  notifications: {
+    at75Percent: {
+      type: Boolean,
+      default: true
+    },
+    at90Percent: {
+      type: Boolean,
+      default: true
+    },
+    atLimit: {
+      type: Boolean,
+      default: true
+    }
+  }
+}, {
+  timestamps: true,
+  toJSON: {
+    transform: function(_doc, ret) {
+      ret._id = ret._id.toString();
+      ret.userId = ret.userId.toString();
+      delete ret.__v;
+      return ret;
+    }
+  }
+});
+budgetSchema.index({ userId: 1, isActive: 1 });
+budgetSchema.index({ userId: 1, category: 1 });
+budgetSchema.index({ userId: 1, startDate: 1, endDate: 1 });
+budgetSchema.index({ endDate: 1 });
+budgetSchema.virtual("remaining").get(function() {
+  return Math.max(0, this.limit - this.spent);
+});
+budgetSchema.virtual("percentageUsed").get(function() {
+  return this.limit > 0 ? this.spent / this.limit * 100 : 0;
+});
+budgetSchema.virtual("isOverBudget").get(function() {
+  return this.spent > this.limit;
+});
+budgetSchema.virtual("daysRemaining").get(function() {
+  const now = new Date;
+  const endDate = new Date(this.endDate);
+  const diffTime = endDate.getTime() - now.getTime();
+  return Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+});
+budgetSchema.pre("save", function(next) {
+  if (this.startDate >= this.endDate) {
+    next(new Error("End date must be after start date"));
+  } else {
+    next();
+  }
+});
+budgetSchema.statics.findActiveByUser = function(userId) {
+  return this.find({
+    userId,
+    isActive: true,
+    endDate: { $gte: new Date }
+  }).sort({ createdAt: -1 });
+};
+budgetSchema.statics.findByCategory = function(userId, category) {
+  return this.find({ userId, category, isActive: true });
+};
+budgetSchema.statics.findCurrentBudgets = function(userId) {
+  const now = new Date;
+  return this.find({
+    userId,
+    isActive: true,
+    startDate: { $lte: now },
+    endDate: { $gte: now }
+  });
+};
+budgetSchema.methods.updateSpent = function(amount) {
+  this.spent = Math.max(0, amount);
+  return this.save();
+};
+budgetSchema.methods.addToSpent = function(amount) {
+  this.spent += amount;
+  return this.save();
+};
+budgetSchema.methods.checkNotificationThreshold = function() {
+  const percentage = this.percentageUsed;
+  const thresholds = [];
+  if (this.notifications.at75Percent && percentage >= 75 && percentage < 90) {
+    thresholds.push("75");
+  }
+  if (this.notifications.at90Percent && percentage >= 90 && percentage < 100) {
+    thresholds.push("90");
+  }
+  if (this.notifications.atLimit && percentage >= 100) {
+    thresholds.push("limit");
+  }
+  return thresholds;
+};
+budgetSchema.methods.resetForNewPeriod = function(startDate, endDate) {
+  this.spent = 0;
+  this.startDate = startDate;
+  this.endDate = endDate;
+  return this.save();
+};
+budgetSchema.methods.deactivate = function() {
+  this.isActive = false;
+  return this.save();
+};
+var BudgetModel = import_mongoose4.default.model("Budget", budgetSchema);
+// src/models/Investment.model.ts
+var import_mongoose5 = __toESM(require_mongoose(), 1);
+var investmentSchema = new import_mongoose5.Schema({
+  userId: {
+    type: import_mongoose5.Schema.Types.ObjectId,
+    ref: "User",
+    required: true,
+    index: true
+  },
+  accountId: {
+    type: import_mongoose5.Schema.Types.ObjectId,
+    ref: "Account",
+    required: true,
+    index: true
+  },
+  symbol: {
+    type: String,
+    required: true,
+    uppercase: true,
+    trim: true,
+    maxlength: 10,
+    index: true
+  },
+  name: {
+    type: String,
+    required: true,
+    trim: true,
+    maxlength: 200
+  },
+  quantity: {
+    type: Number,
+    required: true,
+    min: 0,
+    validate: {
+      validator: function(value) {
+        return !isNaN(value) && isFinite(value) && value >= 0;
+      },
+      message: "Quantity must be a positive number"
+    }
+  },
+  currentPrice: {
+    type: Number,
+    required: true,
+    min: 0,
+    validate: {
+      validator: function(value) {
+        return !isNaN(value) && isFinite(value) && value >= 0;
+      },
+      message: "Current price must be a positive number"
+    }
+  },
+  purchasePrice: {
+    type: Number,
+    required: true,
+    min: 0,
+    validate: {
+      validator: function(value) {
+        return !isNaN(value) && isFinite(value) && value >= 0;
+      },
+      message: "Purchase price must be a positive number"
+    }
+  },
+  purchaseDate: {
+    type: Date,
+    required: true,
+    index: true
+  },
+  marketValue: {
+    type: Number,
+    required: true,
+    min: 0
+  },
+  gainLoss: {
+    type: Number,
+    required: true
+  },
+  gainLossPercent: {
+    type: Number,
+    required: true
+  },
+  lastUpdated: {
+    type: Date,
+    default: Date.now,
+    index: true
+  }
+}, {
+  timestamps: true,
+  toJSON: {
+    transform: function(_doc, ret) {
+      ret._id = ret._id.toString();
+      ret.userId = ret.userId.toString();
+      ret.accountId = ret.accountId.toString();
+      delete ret.__v;
+      return ret;
+    }
+  }
+});
+investmentSchema.index({ userId: 1, accountId: 1 });
+investmentSchema.index({ userId: 1, symbol: 1 });
+investmentSchema.index({ symbol: 1, lastUpdated: -1 });
+investmentSchema.index({ lastUpdated: 1 });
+investmentSchema.pre("save", function(next) {
+  this.marketValue = this.quantity * this.currentPrice;
+  const totalCost = this.quantity * this.purchasePrice;
+  this.gainLoss = this.marketValue - totalCost;
+  this.gainLossPercent = totalCost > 0 ? this.gainLoss / totalCost * 100 : 0;
+  this.lastUpdated = new Date;
+  next();
+});
+investmentSchema.statics.findByUser = function(userId) {
+  return this.find({ userId }).sort({ symbol: 1 });
+};
+investmentSchema.statics.findByAccount = function(accountId) {
+  return this.find({ accountId }).sort({ symbol: 1 });
+};
+investmentSchema.statics.findBySymbol = function(userId, symbol) {
+  return this.findOne({ userId, symbol: symbol.toUpperCase() });
+};
+investmentSchema.statics.getPortfolioSummary = function(userId) {
+  return this.aggregate([
+    { $match: { userId: new import_mongoose5.default.Types.ObjectId(userId) } },
+    {
+      $group: {
+        _id: null,
+        totalValue: { $sum: "$marketValue" },
+        totalGainLoss: { $sum: "$gainLoss" },
+        totalCost: { $sum: { $multiply: ["$quantity", "$purchasePrice"] } },
+        investmentCount: { $sum: 1 }
+      }
+    },
+    {
+      $addFields: {
+        totalGainLossPercent: {
+          $cond: {
+            if: { $gt: ["$totalCost", 0] },
+            then: { $multiply: [{ $divide: ["$totalGainLoss", "$totalCost"] }, 100] },
+            else: 0
+          }
+        }
+      }
+    }
+  ]);
+};
+investmentSchema.statics.findStaleInvestments = function(hoursOld = 1) {
+  const cutoffTime = new Date(Date.now() - hoursOld * 60 * 60 * 1000);
+  return this.find({ lastUpdated: { $lt: cutoffTime } });
+};
+investmentSchema.methods.updatePrice = function(newPrice) {
+  this.currentPrice = newPrice;
+  return this.save();
+};
+investmentSchema.methods.updateQuantity = function(newQuantity) {
+  this.quantity = newQuantity;
+  return this.save();
+};
+investmentSchema.methods.isPriceStale = function(hoursOld = 1) {
+  const cutoffTime = new Date(Date.now() - hoursOld * 60 * 60 * 1000);
+  return this.lastUpdated < cutoffTime;
+};
+var InvestmentModel = import_mongoose5.default.model("Investment", investmentSchema);
+// src/models/Bill.model.ts
+var import_mongoose6 = __toESM(require_mongoose(), 1);
+var billSchema = new import_mongoose6.Schema({
+  userId: {
+    type: import_mongoose6.Schema.Types.ObjectId,
+    ref: "User",
+    required: true,
+    index: true
+  },
+  name: {
+    type: String,
+    required: true,
+    trim: true,
+    maxlength: 100
+  },
+  amount: {
+    type: Number,
+    required: true,
+    min: 0,
+    validate: {
+      validator: function(value) {
+        return !isNaN(value) && isFinite(value) && value >= 0;
+      },
+      message: "Amount must be a positive number"
+    }
+  },
+  dueDate: {
+    type: Date,
+    required: true,
+    index: true
+  },
+  recurrence: {
+    type: {
+      type: String,
+      required: true,
+      enum: ["monthly", "weekly", "yearly", "custom"]
+    },
+    interval: {
+      type: Number,
+      required: true,
+      min: 1,
+      default: 1
+    },
+    endDate: {
+      type: Date
+    }
+  },
+  category: {
+    type: String,
+    required: true,
+    trim: true,
+    maxlength: 50,
+    index: true
+  },
+  isAutoPay: {
+    type: Boolean,
+    default: false
+  },
+  reminderDays: [{
+    type: Number,
+    min: 0,
+    max: 365
+  }],
+  lastPaidDate: {
+    type: Date,
+    index: true
+  },
+  nextDueDate: {
+    type: Date,
+    required: true,
+    index: true
+  },
+  isActive: {
+    type: Boolean,
+    default: true,
+    index: true
+  }
+}, {
+  timestamps: true,
+  toJSON: {
+    transform: function(_doc, ret) {
+      ret._id = ret._id.toString();
+      ret.userId = ret.userId.toString();
+      delete ret.__v;
+      return ret;
+    }
+  }
+});
+billSchema.index({ userId: 1, isActive: 1 });
+billSchema.index({ userId: 1, nextDueDate: 1 });
+billSchema.index({ userId: 1, category: 1 });
+billSchema.index({ nextDueDate: 1, isActive: 1 });
+billSchema.virtual("daysUntilDue").get(function() {
+  const now = new Date;
+  const dueDate = new Date(this.nextDueDate);
+  const diffTime = dueDate.getTime() - now.getTime();
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+});
+billSchema.virtual("isOverdue").get(function() {
+  return new Date > new Date(this.nextDueDate);
+});
+billSchema.pre("save", function(next) {
+  if (this.isNew || this.isModified("dueDate") || this.isModified("recurrence")) {
+    this.nextDueDate = this.calculateNextDueDate();
+  }
+  next();
+});
+billSchema.statics.findActiveByUser = function(userId) {
+  return this.find({ userId, isActive: true }).sort({ nextDueDate: 1 });
+};
+billSchema.statics.findUpcomingBills = function(userId, days = 30) {
+  const endDate = new Date;
+  endDate.setDate(endDate.getDate() + days);
+  return this.find({
+    userId,
+    isActive: true,
+    nextDueDate: { $lte: endDate }
+  }).sort({ nextDueDate: 1 });
+};
+billSchema.statics.findOverdueBills = function(userId) {
+  return this.find({
+    userId,
+    isActive: true,
+    nextDueDate: { $lt: new Date }
+  }).sort({ nextDueDate: 1 });
+};
+billSchema.statics.findByCategory = function(userId, category) {
+  return this.find({ userId, category, isActive: true });
+};
+billSchema.methods.calculateNextDueDate = function() {
+  const currentDue = new Date(this.dueDate);
+  const now = new Date;
+  if (currentDue > now) {
+    return currentDue;
+  }
+  let nextDue = new Date(currentDue);
+  switch (this.recurrence.type) {
+    case "weekly":
+      while (nextDue <= now) {
+        nextDue.setDate(nextDue.getDate() + 7 * this.recurrence.interval);
+      }
+      break;
+    case "monthly":
+      while (nextDue <= now) {
+        nextDue.setMonth(nextDue.getMonth() + this.recurrence.interval);
+      }
+      break;
+    case "yearly":
+      while (nextDue <= now) {
+        nextDue.setFullYear(nextDue.getFullYear() + this.recurrence.interval);
+      }
+      break;
+    case "custom":
+      if (!Number.isInteger(this.recurrence.interval) || this.recurrence.interval <= 0) {
+        throw new Error("Invalid interval for custom recurrence: must be a positive integer representing days.");
+      }
+      while (nextDue <= now) {
+        nextDue.setDate(nextDue.getDate() + this.recurrence.interval);
+      }
+      break;
+  }
+  if (this.recurrence.endDate && nextDue > this.recurrence.endDate) {
+    this.isActive = false;
+  }
+  return nextDue;
+};
+billSchema.methods.markAsPaid = function(paidDate = new Date) {
+  this.lastPaidDate = paidDate;
+  this.nextDueDate = this.calculateNextDueDate();
+  return this.save();
+};
+billSchema.methods.updateAmount = function(newAmount) {
+  this.amount = newAmount;
+  return this.save();
+};
+billSchema.methods.shouldSendReminder = function() {
+  const daysUntilDue = this.daysUntilDue;
+  return this.reminderDays.includes(daysUntilDue) && daysUntilDue >= 0;
+};
+billSchema.methods.deactivate = function() {
+  this.isActive = false;
+  return this.save();
+};
+var BillModel = import_mongoose6.default.model("Bill", billSchema);
+// src/models/Goal.model.ts
+var import_mongoose7 = __toESM(require_mongoose(), 1);
+var goalSchema = new import_mongoose7.Schema({
+  userId: {
+    type: import_mongoose7.Schema.Types.ObjectId,
+    ref: "User",
+    required: true,
+    index: true
+  },
+  name: {
+    type: String,
+    required: true,
+    trim: true,
+    maxlength: 100
+  },
+  description: {
+    type: String,
+    trim: true,
+    maxlength: 500
+  },
+  targetAmount: {
+    type: Number,
+    required: true,
+    min: 0,
+    validate: {
+      validator: function(value) {
+        return !isNaN(value) && isFinite(value) && value > 0;
+      },
+      message: "Target amount must be a positive number"
+    }
+  },
+  currentAmount: {
+    type: Number,
+    default: 0,
+    min: 0,
+    validate: {
+      validator: function(value) {
+        return !isNaN(value) && isFinite(value) && value >= 0;
+      },
+      message: "Current amount must be a non-negative number"
+    }
+  },
+  targetDate: {
+    type: Date,
+    required: true,
+    index: true,
+    validate: {
+      validator: function(value) {
+        return value > new Date;
+      },
+      message: "Target date must be in the future"
+    }
+  },
+  type: {
+    type: String,
+    required: true,
+    enum: ["savings", "debt_payoff", "investment", "emergency_fund", "vacation", "purchase", "other"],
+    index: true
+  },
+  priority: {
+    type: String,
+    required: true,
+    enum: ["low", "medium", "high"],
+    default: "medium",
+    index: true
+  },
+  isActive: {
+    type: Boolean,
+    default: true,
+    index: true
+  },
+  isAchieved: {
+    type: Boolean,
+    default: false,
+    index: true
+  },
+  achievedDate: {
+    type: Date,
+    index: true
+  }
+}, {
+  timestamps: true,
+  toJSON: {
+    transform: function(_doc, ret) {
+      ret._id = ret._id.toString();
+      ret.userId = ret.userId.toString();
+      delete ret.__v;
+      return ret;
+    }
+  }
+});
+goalSchema.index({ userId: 1, isActive: 1 });
+goalSchema.index({ userId: 1, type: 1 });
+goalSchema.index({ userId: 1, priority: 1 });
+goalSchema.index({ userId: 1, targetDate: 1 });
+goalSchema.index({ userId: 1, isAchieved: 1 });
+goalSchema.virtual("progressPercentage").get(function() {
+  return this.targetAmount > 0 ? Math.min(100, this.currentAmount / this.targetAmount * 100) : 0;
+});
+goalSchema.virtual("remainingAmount").get(function() {
+  return Math.max(0, this.targetAmount - this.currentAmount);
+});
+goalSchema.virtual("daysRemaining").get(function() {
+  const now = new Date;
+  const targetDate = new Date(this.targetDate);
+  const diffTime = targetDate.getTime() - now.getTime();
+  return Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+});
+goalSchema.virtual("monthlyContributionNeeded").get(function() {
+  const remaining = this.remainingAmount;
+  const daysRemaining = this.daysRemaining;
+  if (daysRemaining <= 0 || remaining <= 0)
+    return 0;
+  const monthsRemaining = daysRemaining / 30.44;
+  return monthsRemaining > 0 ? remaining / monthsRemaining : remaining;
+});
+goalSchema.virtual("isOnTrack").get(function() {
+  const expectedProgress = this.calculateExpectedProgress();
+  return this.progressPercentage >= expectedProgress - 5;
+});
+goalSchema.pre("save", function(next) {
+  if (this.currentAmount >= this.targetAmount && !this.isAchieved) {
+    this.isAchieved = true;
+    this.achievedDate = new Date;
+  } else if (this.currentAmount < this.targetAmount && this.isAchieved) {
+    this.isAchieved = false;
+    this.achievedDate = undefined;
+  }
+  next();
+});
+goalSchema.statics.findActiveByUser = function(userId) {
+  return this.find({ userId, isActive: true }).sort({ priority: -1, targetDate: 1 });
+};
+goalSchema.statics.findByType = function(userId, type) {
+  return this.find({ userId, type, isActive: true });
+};
+goalSchema.statics.findAchievedGoals = function(userId) {
+  return this.find({ userId, isAchieved: true }).sort({ achievedDate: -1 });
+};
+goalSchema.statics.findByPriority = function(userId, priority) {
+  return this.find({ userId, priority, isActive: true });
+};
+goalSchema.statics.findOverdueGoals = function(userId) {
+  return this.find({
+    userId,
+    isActive: true,
+    isAchieved: false,
+    targetDate: { $lt: new Date }
+  });
+};
+goalSchema.methods.addContribution = function(amount) {
+  this.currentAmount = Math.min(this.targetAmount, this.currentAmount + amount);
+  return this.save();
+};
+goalSchema.methods.calculateExpectedProgress = function() {
+  const now = new Date;
+  const createdAt = new Date(this.createdAt);
+  const targetDate = new Date(this.targetDate);
+  const totalDuration = targetDate.getTime() - createdAt.getTime();
+  const elapsed = now.getTime() - createdAt.getTime();
+  if (totalDuration <= 0)
+    return 100;
+  if (elapsed <= 0)
+    return 0;
+  return Math.min(100, elapsed / totalDuration * 100);
+};
+goalSchema.methods.calculateProjectedCompletionDate = function() {
+  if (this.isAchieved)
+    return this.achievedDate;
+  const remaining = this.remainingAmount;
+  if (remaining <= 0)
+    return new Date;
+  const threeMonthsAgo = new Date;
+  threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+  const contributionsSinceCreation = this.currentAmount;
+  const daysSinceCreation = Math.max(1, (Date.now() - this.createdAt.getTime()) / (1000 * 60 * 60 * 24));
+  const dailyAverage = contributionsSinceCreation / daysSinceCreation;
+  if (dailyAverage <= 0)
+    return null;
+  const daysToCompletion = remaining / dailyAverage;
+  const projectedDate = new Date;
+  projectedDate.setDate(projectedDate.getDate() + daysToCompletion);
+  return projectedDate;
+};
+goalSchema.methods.updateTarget = function(newTargetAmount, newTargetDate) {
+  this.targetAmount = newTargetAmount;
+  if (newTargetDate) {
+    this.targetDate = newTargetDate;
+  }
+  return this.save();
+};
+goalSchema.methods.deactivate = function() {
+  this.isActive = false;
+  return this.save();
+};
+var GoalModel = import_mongoose7.default.model("Goal", goalSchema);
 // src/services/email.service.ts
 var import_config5 = __toESM(require_dist(), 1);
 
@@ -101887,15 +102852,249 @@ class AuthService {
   }
 }
 var authService = AuthService.getInstance();
+// src/services/user.service.ts
+class UserService {
+  async getUserProfile(userId) {
+    const user = await User.findById(userId).select("-passwordHash");
+    if (!user) {
+      throw new AppError("User not found", 404);
+    }
+    return user;
+  }
+  async updatePreferences(userId, preferencesData) {
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new AppError("User not found", 404);
+    }
+    if (preferencesData.currency) {
+      user.preferences.currency = preferencesData.currency;
+    }
+    if (preferencesData.dateFormat) {
+      user.preferences.dateFormat = preferencesData.dateFormat;
+    }
+    if (preferencesData.timezone) {
+      user.profile.timezone = preferencesData.timezone;
+    }
+    if (preferencesData.notifications) {
+      const notificationKeys = ["email", "push", "budget", "bills", "investments", "goals", "security", "marketing"];
+      notificationKeys.forEach((key) => {
+        if (preferencesData.notifications[key] !== undefined) {
+          user.preferences.notifications[key] = preferencesData.notifications[key];
+        }
+      });
+    }
+    await user.save();
+    return await User.findById(userId).select("-passwordHash");
+  }
+  async updateProfile(userId, profileData) {
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new AppError("User not found", 404);
+    }
+    if (profileData.firstName) {
+      user.profile.firstName = profileData.firstName;
+    }
+    if (profileData.lastName) {
+      user.profile.lastName = profileData.lastName;
+    }
+    if (profileData.phone !== undefined) {
+      user.profile.phone = profileData.phone;
+    }
+    if (profileData.timezone) {
+      user.profile.timezone = profileData.timezone;
+    }
+    await user.save();
+    return await User.findById(userId).select("-passwordHash");
+  }
+  async resetPreferences(userId) {
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new AppError("User not found", 404);
+    }
+    user.preferences = {
+      currency: "USD",
+      dateFormat: "MM/DD/YYYY",
+      notifications: {
+        email: true,
+        push: false,
+        budget: true,
+        bills: true,
+        investments: true,
+        goals: true,
+        security: true,
+        marketing: false
+      }
+    };
+    await user.save();
+    return await User.findById(userId).select("-passwordHash");
+  }
+  getPreferenceOptions() {
+    return {
+      currencies: [
+        { code: "USD", name: "US Dollar", symbol: "$" },
+        { code: "EUR", name: "Euro", symbol: "€" },
+        { code: "GBP", name: "British Pound", symbol: "£" },
+        { code: "CAD", name: "Canadian Dollar", symbol: "C$" },
+        { code: "AUD", name: "Australian Dollar", symbol: "A$" },
+        { code: "JPY", name: "Japanese Yen", symbol: "¥" },
+        { code: "CHF", name: "Swiss Franc", symbol: "CHF" },
+        { code: "CNY", name: "Chinese Yuan", symbol: "¥" },
+        { code: "INR", name: "Indian Rupee", symbol: "₹" },
+        { code: "BRL", name: "Brazilian Real", symbol: "R$" }
+      ],
+      dateFormats: [
+        { format: "MM/DD/YYYY", example: "12/31/2023", description: "US Format" },
+        { format: "DD/MM/YYYY", example: "31/12/2023", description: "European Format" },
+        { format: "YYYY-MM-DD", example: "2023-12-31", description: "ISO Format" }
+      ],
+      timezones: [
+        { value: "America/New_York", label: "Eastern Time (New York)", offset: "UTC-5/-4" },
+        { value: "America/Chicago", label: "Central Time (Chicago)", offset: "UTC-6/-5" },
+        { value: "America/Denver", label: "Mountain Time (Denver)", offset: "UTC-7/-6" },
+        { value: "America/Los_Angeles", label: "Pacific Time (Los Angeles)", offset: "UTC-8/-7" },
+        { value: "America/Toronto", label: "Eastern Time (Toronto)", offset: "UTC-5/-4" },
+        { value: "America/Vancouver", label: "Pacific Time (Vancouver)", offset: "UTC-8/-7" },
+        { value: "America/Mexico_City", label: "Central Time (Mexico City)", offset: "UTC-6/-5" },
+        { value: "Europe/London", label: "Greenwich Mean Time (London)", offset: "UTC+0/+1" },
+        { value: "Europe/Paris", label: "Central European Time (Paris)", offset: "UTC+1/+2" },
+        { value: "Europe/Berlin", label: "Central European Time (Berlin)", offset: "UTC+1/+2" },
+        { value: "Europe/Rome", label: "Central European Time (Rome)", offset: "UTC+1/+2" },
+        { value: "Europe/Madrid", label: "Central European Time (Madrid)", offset: "UTC+1/+2" },
+        { value: "Europe/Amsterdam", label: "Central European Time (Amsterdam)", offset: "UTC+1/+2" },
+        { value: "Europe/Stockholm", label: "Central European Time (Stockholm)", offset: "UTC+1/+2" },
+        { value: "Europe/Zurich", label: "Central European Time (Zurich)", offset: "UTC+1/+2" },
+        { value: "Asia/Tokyo", label: "Japan Standard Time (Tokyo)", offset: "UTC+9" },
+        { value: "Asia/Shanghai", label: "China Standard Time (Shanghai)", offset: "UTC+8" },
+        { value: "Asia/Hong_Kong", label: "Hong Kong Time", offset: "UTC+8" },
+        { value: "Asia/Singapore", label: "Singapore Standard Time", offset: "UTC+8" },
+        { value: "Asia/Seoul", label: "Korea Standard Time (Seoul)", offset: "UTC+9" },
+        { value: "Asia/Mumbai", label: "India Standard Time (Mumbai)", offset: "UTC+5:30" },
+        { value: "Asia/Dubai", label: "Gulf Standard Time (Dubai)", offset: "UTC+4" },
+        { value: "Asia/Bangkok", label: "Indochina Time (Bangkok)", offset: "UTC+7" },
+        { value: "Australia/Sydney", label: "Australian Eastern Time (Sydney)", offset: "UTC+10/+11" },
+        { value: "Australia/Melbourne", label: "Australian Eastern Time (Melbourne)", offset: "UTC+10/+11" },
+        { value: "Australia/Perth", label: "Australian Western Time (Perth)", offset: "UTC+8" },
+        { value: "Pacific/Auckland", label: "New Zealand Standard Time (Auckland)", offset: "UTC+12/+13" },
+        { value: "America/Sao_Paulo", label: "Brasília Time (São Paulo)", offset: "UTC-3" },
+        { value: "America/Buenos_Aires", label: "Argentina Time (Buenos Aires)", offset: "UTC-3" },
+        { value: "America/Lima", label: "Peru Time (Lima)", offset: "UTC-5" },
+        { value: "Africa/Cairo", label: "Eastern European Time (Cairo)", offset: "UTC+2" },
+        { value: "Africa/Johannesburg", label: "South Africa Standard Time", offset: "UTC+2" },
+        { value: "Africa/Lagos", label: "West Africa Time (Lagos)", offset: "UTC+1" }
+      ]
+    };
+  }
+  async validateTimezone(timezone) {
+    const options = this.getPreferenceOptions();
+    return options.timezones.some((tz) => tz.value === timezone);
+  }
+  async validateCurrency(currency) {
+    const options = this.getPreferenceOptions();
+    return options.currencies.some((curr) => curr.code === currency);
+  }
+  async getUserLocalizedPreferences(userId) {
+    const user = await this.getUserProfile(userId);
+    const options = this.getPreferenceOptions();
+    const currentCurrency = options.currencies.find((c) => c.code === user.preferences.currency);
+    const currentDateFormat = options.dateFormats.find((d) => d.format === user.preferences.dateFormat);
+    const currentTimezone = options.timezones.find((t) => t.value === user.profile.timezone);
+    return {
+      preferences: user.preferences,
+      timezone: user.profile.timezone,
+      localizedOptions: {
+        currency: currentCurrency,
+        dateFormat: currentDateFormat,
+        timezone: currentTimezone
+      }
+    };
+  }
+  async bulkUpdatePreferences(userId, preferencesData) {
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new AppError("User not found", 404);
+    }
+    if (preferencesData.currency && !await this.validateCurrency(preferencesData.currency)) {
+      throw new AppError("Invalid currency code", 400);
+    }
+    if (preferencesData.timezone && !await this.validateTimezone(preferencesData.timezone)) {
+      throw new AppError("Invalid timezone", 400);
+    }
+    const updates = {};
+    if (preferencesData.currency) {
+      updates["preferences.currency"] = preferencesData.currency;
+    }
+    if (preferencesData.dateFormat) {
+      updates["preferences.dateFormat"] = preferencesData.dateFormat;
+    }
+    if (preferencesData.timezone) {
+      updates["profile.timezone"] = preferencesData.timezone;
+    }
+    if (preferencesData.notifications) {
+      Object.keys(preferencesData.notifications).forEach((key) => {
+        if (preferencesData.notifications[key] !== undefined) {
+          updates[`preferences.notifications.${key}`] = preferencesData.notifications[key];
+        }
+      });
+    }
+    const updatedUser = await User.findByIdAndUpdate(userId, { $set: updates }, { new: true, runValidators: true }).select("-passwordHash");
+    if (!updatedUser) {
+      throw new AppError("Failed to update preferences", 500);
+    }
+    return updatedUser;
+  }
+  async validateAllPreferences(preferencesData) {
+    const errors = [];
+    if (preferencesData.currency && !await this.validateCurrency(preferencesData.currency)) {
+      errors.push("Invalid currency code");
+    }
+    if (preferencesData.timezone && !await this.validateTimezone(preferencesData.timezone)) {
+      errors.push("Invalid timezone");
+    }
+    if (preferencesData.dateFormat) {
+      const validFormats = ["MM/DD/YYYY", "DD/MM/YYYY", "YYYY-MM-DD"];
+      if (!validFormats.includes(preferencesData.dateFormat)) {
+        errors.push("Invalid date format");
+      }
+    }
+    return {
+      isValid: errors.length === 0,
+      errors
+    };
+  }
+}
+var userService = new UserService;
+// src/middleware/auth.middleware.ts
+var authenticate = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      throw new AuthenticationError("Access token required");
+    }
+    const token = authHeader.substring(7);
+    const decoded = authService.verifyAccessToken(token);
+    const user2 = await authService.getUserById(decoded.userId);
+    if (!user2) {
+      throw new AuthenticationError("User not found");
+    }
+    req.user = {
+      id: user2._id.toString(),
+      email: user2.email,
+      emailVerified: user2.security.emailVerified
+    };
+    next();
+  } catch (error) {
+    next(error);
+  }
+};
 // src/routes/index.ts
-var import_express4 = __toESM(require_express2(), 1);
+var import_express5 = __toESM(require_express2(), 1);
 
 // src/routes/health.routes.ts
 var import_express = __toESM(require_express2(), 1);
 var import_config9 = __toESM(require_dist(), 1);
 
 // src/database/connection.ts
-var import_mongoose2 = __toESM(require_mongoose(), 1);
+var import_mongoose8 = __toESM(require_mongoose(), 1);
 var import_config7 = __toESM(require_dist(), 1);
 
 class DatabaseConnection {
@@ -101933,15 +103132,15 @@ class DatabaseConnection {
         console.log(`\uD83D\uDD04 Attempting database connection (${this.connectionAttempts}/${this.maxRetries})...`);
         const mongoUri = process.env.MONGODB_URI || import_config7.databaseConfig.mongodb.uri;
         console.log(`\uD83D\uDD17 Connecting to: ${mongoUri.includes("mongodb+srv") ? "MongoDB Atlas" : "Local MongoDB"}`);
-        await import_mongoose2.default.connect(mongoUri, {
+        await import_mongoose8.default.connect(mongoUri, {
           ...import_config7.databaseConfig.mongodb.options,
           bufferCommands: false
         });
         this.isConnected = true;
         this.connectionAttempts = 0;
         console.log("✅ Database connected successfully");
-        console.log(`\uD83D\uDCCA Database: ${import_mongoose2.default.connection.name}`);
-        console.log(`\uD83C\uDF10 Host: ${import_mongoose2.default.connection.host}:${import_mongoose2.default.connection.port}`);
+        console.log(`\uD83D\uDCCA Database: ${import_mongoose8.default.connection.name}`);
+        console.log(`\uD83C\uDF10 Host: ${import_mongoose8.default.connection.host}:${import_mongoose8.default.connection.port}`);
         this.setupEventListeners();
         return;
       } catch (error2) {
@@ -101955,15 +103154,15 @@ class DatabaseConnection {
     throw new Error(`Failed to connect to database after ${this.maxRetries} attempts`);
   }
   setupEventListeners() {
-    import_mongoose2.default.connection.on("connected", () => {
+    import_mongoose8.default.connection.on("connected", () => {
       console.log("\uD83D\uDCCA Mongoose connected to database");
       this.isConnected = true;
     });
-    import_mongoose2.default.connection.on("error", (error2) => {
+    import_mongoose8.default.connection.on("error", (error2) => {
       console.error("❌ Mongoose connection error:", error2);
       this.isConnected = false;
     });
-    import_mongoose2.default.connection.on("disconnected", () => {
+    import_mongoose8.default.connection.on("disconnected", () => {
       console.log("\uD83D\uDCCA Mongoose disconnected from database");
       this.isConnected = false;
       if (import_config7.appConfig.nodeEnv === "production") {
@@ -101971,7 +103170,7 @@ class DatabaseConnection {
         setTimeout(() => this.connect(), this.retryDelay);
       }
     });
-    import_mongoose2.default.connection.on("reconnected", () => {
+    import_mongoose8.default.connection.on("reconnected", () => {
       console.log("✅ Mongoose reconnected to database");
       this.isConnected = true;
     });
@@ -101983,7 +103182,7 @@ class DatabaseConnection {
       return;
     }
     try {
-      await import_mongoose2.default.connection.close();
+      await import_mongoose8.default.connection.close();
       this.isConnected = false;
       console.log("\uD83D\uDCCA Database connection closed");
     } catch (error2) {
@@ -101994,38 +103193,38 @@ class DatabaseConnection {
   getConnectionStatus() {
     return {
       isConnected: this.isConnected,
-      readyState: import_mongoose2.default.connection.readyState,
-      host: import_mongoose2.default.connection.host,
-      port: import_mongoose2.default.connection.port,
-      name: import_mongoose2.default.connection.name
+      readyState: import_mongoose8.default.connection.readyState,
+      host: import_mongoose8.default.connection.host,
+      port: import_mongoose8.default.connection.port,
+      name: import_mongoose8.default.connection.name
     };
   }
   async healthCheck() {
     try {
-      if (!this.isConnected || import_mongoose2.default.connection.readyState !== 1) {
+      if (!this.isConnected || import_mongoose8.default.connection.readyState !== 1) {
         return {
           status: "unhealthy",
           details: {
-            readyState: import_mongoose2.default.connection.readyState,
+            readyState: import_mongoose8.default.connection.readyState,
             error: "Database not connected"
           }
         };
       }
-      await import_mongoose2.default.connection.db.admin().ping();
+      await import_mongoose8.default.connection.db.admin().ping();
       return {
         status: "healthy",
         details: {
-          readyState: import_mongoose2.default.connection.readyState,
-          host: import_mongoose2.default.connection.host,
-          port: import_mongoose2.default.connection.port,
-          name: import_mongoose2.default.connection.name
+          readyState: import_mongoose8.default.connection.readyState,
+          host: import_mongoose8.default.connection.host,
+          port: import_mongoose8.default.connection.port,
+          name: import_mongoose8.default.connection.name
         }
       };
     } catch (error2) {
       return {
         status: "unhealthy",
         details: {
-          readyState: import_mongoose2.default.connection.readyState,
+          readyState: import_mongoose8.default.connection.readyState,
           error: error2 instanceof Error ? error2.message : "Unknown error"
         }
       };
@@ -102045,7 +103244,7 @@ var connectDatabase = () => database.connect();
 var getDatabaseStatus = () => database.getConnectionStatus();
 var getDatabaseHealth = () => database.healthCheck();
 // src/database/seed.ts
-var import_mongoose3 = __toESM(require_mongoose(), 1);
+var import_mongoose9 = __toESM(require_mongoose(), 1);
 var import_config8 = __toESM(require_dist(), 1);
 
 class DatabaseSeeder {
@@ -102078,7 +103277,7 @@ class DatabaseSeeder {
     const { dropCollection = false, upsert = false } = options;
     console.log(`\uD83C\uDF31 Seeding collection: ${collection}`);
     try {
-      const db = import_mongoose3.default.connection.db;
+      const db = import_mongoose9.default.connection.db;
       const coll = db.collection(collection);
       if (dropCollection) {
         try {
@@ -102117,7 +103316,7 @@ class DatabaseSeeder {
     }
     console.log("\uD83E\uDDF9 Clearing database...");
     try {
-      const db = import_mongoose3.default.connection.db;
+      const db = import_mongoose9.default.connection.db;
       const collections = await db.listCollections().toArray();
       for (const collection of collections) {
         await db.collection(collection.name).deleteMany({});
@@ -102132,7 +103331,7 @@ class DatabaseSeeder {
   async createIndexes() {
     console.log("\uD83D\uDCCA Creating database indexes...");
     try {
-      const db = import_mongoose3.default.connection.db;
+      const db = import_mongoose9.default.connection.db;
       await db.collection("users").createIndexes([
         { key: { email: 1 }, unique: true },
         { key: { createdAt: 1 } },
@@ -102180,7 +103379,7 @@ var developmentSeedData = [
     collection: "users",
     data: [
       {
-        _id: new import_mongoose3.default.Types.ObjectId("507f1f77bcf86cd799439011"),
+        _id: new import_mongoose9.default.Types.ObjectId("507f1f77bcf86cd799439011"),
         email: "demo@example.com",
         passwordHash: "$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj6ukx.LrUpm",
         profile: {
@@ -102273,7 +103472,7 @@ router.get("/live", asyncHandler(async (req, res) => {
 }));
 
 // src/routes/v1/index.ts
-var import_express3 = __toESM(require_express2(), 1);
+var import_express4 = __toESM(require_express2(), 1);
 
 // src/routes/v1/auth.routes.ts
 var import_express2 = __toESM(require_express2(), 1);
@@ -102357,6 +103556,98 @@ var resendEmailVerificationSchema = {
     email: import_joi2.default.string().email().required().messages({
       "string.email": "Please provide a valid email address",
       "any.required": "Email is required"
+    })
+  })
+};
+// src/validators/user.validators.ts
+var import_joi3 = __toESM(require_lib7(), 1);
+var CURRENCIES = ["USD", "EUR", "GBP", "CAD", "AUD", "JPY", "CHF", "CNY", "INR", "BRL"];
+var DATE_FORMATS = ["MM/DD/YYYY", "DD/MM/YYYY", "YYYY-MM-DD"];
+var TIMEZONES = [
+  "America/New_York",
+  "America/Chicago",
+  "America/Denver",
+  "America/Los_Angeles",
+  "America/Toronto",
+  "America/Vancouver",
+  "America/Mexico_City",
+  "Europe/London",
+  "Europe/Paris",
+  "Europe/Berlin",
+  "Europe/Rome",
+  "Europe/Madrid",
+  "Europe/Amsterdam",
+  "Europe/Stockholm",
+  "Europe/Zurich",
+  "Asia/Tokyo",
+  "Asia/Shanghai",
+  "Asia/Hong_Kong",
+  "Asia/Singapore",
+  "Asia/Seoul",
+  "Asia/Mumbai",
+  "Asia/Dubai",
+  "Asia/Bangkok",
+  "Australia/Sydney",
+  "Australia/Melbourne",
+  "Australia/Perth",
+  "Pacific/Auckland",
+  "America/Sao_Paulo",
+  "America/Buenos_Aires",
+  "America/Lima",
+  "Africa/Cairo",
+  "Africa/Johannesburg",
+  "Africa/Lagos"
+];
+var updatePreferencesSchema = {
+  body: import_joi3.default.object({
+    currency: import_joi3.default.string().valid(...CURRENCIES).optional().messages({
+      "any.only": `Currency must be one of: ${CURRENCIES.join(", ")}`
+    }),
+    dateFormat: import_joi3.default.string().valid(...DATE_FORMATS).optional().messages({
+      "any.only": `Date format must be one of: ${DATE_FORMATS.join(", ")}`
+    }),
+    timezone: import_joi3.default.string().valid(...TIMEZONES).optional().messages({
+      "any.only": `Timezone must be one of the supported timezones`
+    }),
+    notifications: import_joi3.default.object({
+      email: import_joi3.default.boolean().optional(),
+      push: import_joi3.default.boolean().optional(),
+      budget: import_joi3.default.boolean().optional(),
+      bills: import_joi3.default.boolean().optional(),
+      investments: import_joi3.default.boolean().optional(),
+      goals: import_joi3.default.boolean().optional(),
+      security: import_joi3.default.boolean().optional(),
+      marketing: import_joi3.default.boolean().optional()
+    }).optional()
+  }).min(1).messages({
+    "object.min": "At least one preference field must be provided"
+  })
+};
+var updateProfileSchema = {
+  body: import_joi3.default.object({
+    firstName: import_joi3.default.string().trim().min(1).max(50).optional().messages({
+      "string.min": "First name cannot be empty",
+      "string.max": "First name cannot exceed 50 characters"
+    }),
+    lastName: import_joi3.default.string().trim().min(1).max(50).optional().messages({
+      "string.min": "Last name cannot be empty",
+      "string.max": "Last name cannot exceed 50 characters"
+    }),
+    phone: import_joi3.default.string().pattern(/^\+?[\d\s\-\(\)]+$/).allow("").optional().messages({
+      "string.pattern.base": "Please provide a valid phone number"
+    }),
+    timezone: import_joi3.default.string().valid(...TIMEZONES).optional().messages({
+      "any.only": `Timezone must be one of the supported timezones`
+    })
+  }).min(1).messages({
+    "object.min": "At least one profile field must be provided"
+  })
+};
+var userIdParamSchema = {
+  params: import_joi3.default.object({
+    userId: import_joi3.default.string().pattern(/^[0-9a-fA-F]{24}$/).required().messages({
+      "string.pattern.base": "Invalid user ID format",
+      "any.required": "User ID is required"
     })
   })
 };
@@ -102459,25 +103750,174 @@ router2.post("/resend-verification", validate(resendEmailVerificationSchema), as
   });
 }));
 
-// src/routes/v1/index.ts
+// src/routes/v1/user.routes.ts
+var import_express3 = __toESM(require_express2(), 1);
 var router3 = import_express3.Router();
-router3.use("/auth", router2);
+router3.use(authenticate);
 router3.get("/", (req, res) => {
+  res.json({
+    message: "User management endpoints",
+    endpoints: {
+      profile: "GET /profile",
+      "update-profile": "PUT /profile",
+      preferences: "GET /preferences",
+      "update-preferences": "PUT /preferences",
+      "bulk-update-preferences": "PATCH /preferences/bulk",
+      "validate-preferences": "POST /preferences/validate",
+      "reset-preferences": "POST /preferences/reset",
+      "preference-options": "GET /preferences/options",
+      "localized-preferences": "GET /preferences/localized"
+    },
+    timestamp: new Date().toISOString()
+  });
+});
+router3.get("/profile", asyncHandler(async (req, res) => {
+  const userId = req.user.id;
+  const user3 = await userService.getUserProfile(userId);
+  res.json({
+    status: "success",
+    message: "User profile retrieved successfully",
+    data: {
+      user: {
+        id: user3._id,
+        email: user3.email,
+        profile: user3.profile,
+        preferences: user3.preferences,
+        security: {
+          mfaEnabled: user3.security.mfaEnabled,
+          lastLogin: user3.security.lastLogin,
+          emailVerified: user3.security.emailVerified
+        },
+        createdAt: user3.createdAt,
+        updatedAt: user3.updatedAt
+      }
+    },
+    timestamp: new Date().toISOString()
+  });
+}));
+router3.put("/profile", validate(updateProfileSchema), asyncHandler(async (req, res) => {
+  const userId = req.user.id;
+  const profileData = req.body;
+  const user3 = await userService.updateProfile(userId, profileData);
+  res.json({
+    status: "success",
+    message: "Profile updated successfully",
+    data: {
+      user: {
+        id: user3._id,
+        email: user3.email,
+        profile: user3.profile,
+        preferences: user3.preferences,
+        updatedAt: user3.updatedAt
+      }
+    },
+    timestamp: new Date().toISOString()
+  });
+}));
+router3.get("/preferences", asyncHandler(async (req, res) => {
+  const userId = req.user.id;
+  const user3 = await userService.getUserProfile(userId);
+  res.json({
+    status: "success",
+    message: "User preferences retrieved successfully",
+    data: {
+      preferences: user3.preferences,
+      timezone: user3.profile.timezone
+    },
+    timestamp: new Date().toISOString()
+  });
+}));
+router3.put("/preferences", validate(updatePreferencesSchema), asyncHandler(async (req, res) => {
+  const userId = req.user.id;
+  const preferencesData = req.body;
+  const user3 = await userService.updatePreferences(userId, preferencesData);
+  res.json({
+    status: "success",
+    message: "Preferences updated successfully",
+    data: {
+      preferences: user3.preferences,
+      timezone: user3.profile.timezone
+    },
+    timestamp: new Date().toISOString()
+  });
+}));
+router3.post("/preferences/reset", asyncHandler(async (req, res) => {
+  const userId = req.user.id;
+  const user3 = await userService.resetPreferences(userId);
+  res.json({
+    status: "success",
+    message: "Preferences reset to defaults successfully",
+    data: {
+      preferences: user3.preferences
+    },
+    timestamp: new Date().toISOString()
+  });
+}));
+router3.get("/preferences/options", asyncHandler(async (req, res) => {
+  const options = userService.getPreferenceOptions();
+  res.json({
+    status: "success",
+    message: "Preference options retrieved successfully",
+    data: options,
+    timestamp: new Date().toISOString()
+  });
+}));
+router3.get("/preferences/localized", asyncHandler(async (req, res) => {
+  const userId = req.user.id;
+  const localizedPreferences = await userService.getUserLocalizedPreferences(userId);
+  res.json({
+    status: "success",
+    message: "Localized preferences retrieved successfully",
+    data: localizedPreferences,
+    timestamp: new Date().toISOString()
+  });
+}));
+router3.patch("/preferences/bulk", validate(updatePreferencesSchema), asyncHandler(async (req, res) => {
+  const userId = req.user.id;
+  const preferencesData = req.body;
+  const user3 = await userService.bulkUpdatePreferences(userId, preferencesData);
+  res.json({
+    status: "success",
+    message: "Preferences updated successfully (bulk)",
+    data: {
+      preferences: user3.preferences,
+      timezone: user3.profile.timezone
+    },
+    timestamp: new Date().toISOString()
+  });
+}));
+router3.post("/preferences/validate", validate(updatePreferencesSchema), asyncHandler(async (req, res) => {
+  const preferencesData = req.body;
+  const validation2 = await userService.validateAllPreferences(preferencesData);
+  res.json({
+    status: validation2.isValid ? "success" : "error",
+    message: validation2.isValid ? "Preferences are valid" : "Validation failed",
+    data: validation2,
+    timestamp: new Date().toISOString()
+  });
+}));
+
+// src/routes/v1/index.ts
+var router4 = import_express4.Router();
+router4.use("/auth", router2);
+router4.use("/user", router3);
+router4.get("/", (req, res) => {
   res.json({
     message: "Finance App API v1",
     version: "1.0.0",
     endpoints: {
-      auth: "/auth"
+      auth: "/auth",
+      user: "/user"
     },
     timestamp: new Date().toISOString()
   });
 });
 
 // src/routes/index.ts
-var router4 = import_express4.Router();
-router4.use("/health", router);
-router4.use("/api/v1", router3);
-router4.get("/api", (req, res) => {
+var router5 = import_express5.Router();
+router5.use("/health", router);
+router5.use("/api/v1", router4);
+router5.get("/api", (req, res) => {
   res.json({
     message: "Finance App API",
     version: "1.0.0",
@@ -102491,7 +103931,7 @@ router4.get("/api", (req, res) => {
 
 // src/index.ts
 import_dotenv.default.config({ path: "../../.env" });
-var app = import_express5.default();
+var app = import_express6.default();
 var port = import_config10.appConfig.port;
 app.set("trust proxy", 1);
 app.use(requestContext);
@@ -102520,11 +103960,11 @@ app.use(import_cors.default({
 }));
 app.use(rateLimiter);
 app.use(requestLogger);
-app.use(import_express5.default.json({ limit: "10mb" }));
-app.use(import_express5.default.urlencoded({ extended: true, limit: "10mb" }));
+app.use(import_express6.default.json({ limit: "10mb" }));
+app.use(import_express6.default.urlencoded({ extended: true, limit: "10mb" }));
 app.use(sanitizeInput);
 app.use(securityHeaders);
-app.use("/", router4);
+app.use("/", router5);
 app.use(errorLogger);
 app.use(errorHandler);
 app.use("*", notFoundHandler);

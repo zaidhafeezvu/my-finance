@@ -1,19 +1,48 @@
 import Joi from 'joi'
 
 // Available options for validation
-const CURRENCIES = ['USD', 'EUR', 'GBP', 'CAD', 'AUD']
+const CURRENCIES = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY', 'CHF', 'CNY', 'INR', 'BRL']
 const DATE_FORMATS = ['MM/DD/YYYY', 'DD/MM/YYYY', 'YYYY-MM-DD']
 const TIMEZONES = [
+  // North America
   'America/New_York',
   'America/Chicago', 
   'America/Denver',
   'America/Los_Angeles',
+  'America/Toronto',
+  'America/Vancouver',
+  'America/Mexico_City',
+  // Europe
   'Europe/London',
   'Europe/Paris',
   'Europe/Berlin',
+  'Europe/Rome',
+  'Europe/Madrid',
+  'Europe/Amsterdam',
+  'Europe/Stockholm',
+  'Europe/Zurich',
+  // Asia
   'Asia/Tokyo',
   'Asia/Shanghai',
-  'Australia/Sydney'
+  'Asia/Hong_Kong',
+  'Asia/Singapore',
+  'Asia/Seoul',
+  'Asia/Mumbai',
+  'Asia/Dubai',
+  'Asia/Bangkok',
+  // Oceania
+  'Australia/Sydney',
+  'Australia/Melbourne',
+  'Australia/Perth',
+  'Pacific/Auckland',
+  // South America
+  'America/Sao_Paulo',
+  'America/Buenos_Aires',
+  'America/Lima',
+  // Africa
+  'Africa/Cairo',
+  'Africa/Johannesburg',
+  'Africa/Lagos'
 ]
 
 // Update preferences validation schema
@@ -41,7 +70,11 @@ export const updatePreferencesSchema = {
       email: Joi.boolean().optional(),
       push: Joi.boolean().optional(),
       budget: Joi.boolean().optional(),
-      bills: Joi.boolean().optional()
+      bills: Joi.boolean().optional(),
+      investments: Joi.boolean().optional(),
+      goals: Joi.boolean().optional(),
+      security: Joi.boolean().optional(),
+      marketing: Joi.boolean().optional()
     }).optional()
   }).min(1).messages({
     'object.min': 'At least one preference field must be provided'

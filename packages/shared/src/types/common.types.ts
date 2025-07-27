@@ -34,5 +34,5 @@ export interface FilterOptions {
   accounts?: string[]
 }
 
-export type Currency = 'USD' | 'EUR' | 'GBP' | 'CAD' | 'AUD'
+export type Currency = 'USD' | 'EUR' | 'GBP' | 'CAD' | 'AUD' | 'JPY' | 'CHF' | 'CNY' | 'INR' | 'BRL'
 export type Timezone = string // e.g., 'America/New_York'

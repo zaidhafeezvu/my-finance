@@ -1,5 +1,5 @@
 $ bun build src/index.ts --outdir dist --target node
-Bundled 758 modules in 448ms
+Bundled 767 modules in 420ms
 
-  index.js  3.89 MB  (entry point)
+  index.js  3.94 MB  (entry point)
 

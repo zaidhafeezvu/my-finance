@@ -20,5 +20,6 @@ __exportStar(require("./transaction.types"), exports);
 __exportStar(require("./budget.types"), exports);
 __exportStar(require("./investment.types"), exports);
 __exportStar(require("./bill.types"), exports);
+__exportStar(require("./goal.types"), exports);
 __exportStar(require("./common.types"), exports);
 //# sourceMappingURL=index.js.map

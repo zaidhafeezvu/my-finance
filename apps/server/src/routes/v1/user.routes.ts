@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express'
-import { authMiddleware, asyncHandler, validate } from '../../middleware'
+import { authenticate, asyncHandler, validate } from '../../middleware'
 import { userService } from '../../services'
 import {
   updatePreferencesSchema,
@@ -9,7 +9,7 @@ import {
 const router = Router()
 
 // Apply authentication middleware to all user routes
-router.use(authMiddleware)
+router.use(authenticate)
 
 // User routes overview
 router.get('/', (req: Request, res: Response) => {
@@ -20,8 +20,11 @@ router.get('/', (req: Request, res: Response) => {
       'update-profile': 'PUT /profile',
       preferences: 'GET /preferences',
       'update-preferences': 'PUT /preferences',
+      'bulk-update-preferences': 'PATCH /preferences/bulk',
+      'validate-preferences': 'POST /preferences/validate',
       'reset-preferences': 'POST /preferences/reset',
-      'preference-options': 'GET /preferences/options'
+      'preference-options': 'GET /preferences/options',
+      'localized-preferences': 'GET /preferences/localized'
     },
     timestamp: new Date().toISOString()
   })
@@ -148,6 +151,58 @@ router.get('/preferences/options',
       status: 'success',
       message: 'Preference options retrieved successfully',
       data: options,
+      timestamp: new Date().toISOString()
+    })
+  })
+)
+
+// Get user's localized preferences with detailed information
+router.get('/preferences/localized',
+  asyncHandler(async (req: Request, res: Response) => {
+    const userId = req.user!.id
+    const localizedPreferences = await userService.getUserLocalizedPreferences(userId)
+
+    res.json({
+      status: 'success',
+      message: 'Localized preferences retrieved successfully',
+      data: localizedPreferences,
+      timestamp: new Date().toISOString()
+    })
+  })
+)
+
+// Bulk update preferences with atomic operation
+router.patch('/preferences/bulk',
+  validate(updatePreferencesSchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    const userId = req.user!.id
+    const preferencesData = req.body
+
+    const user = await userService.bulkUpdatePreferences(userId, preferencesData)
+
+    res.json({
+      status: 'success',
+      message: 'Preferences updated successfully (bulk)',
+      data: {
+        preferences: user.preferences,
+        timezone: user.profile.timezone
+      },
+      timestamp: new Date().toISOString()
+    })
+  })
+)
+
+// Validate preferences without updating
+router.post('/preferences/validate',
+  validate(updatePreferencesSchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    const preferencesData = req.body
+    const validation = await userService.validateAllPreferences(preferencesData)
+
+    res.json({
+      status: validation.isValid ? 'success' : 'error',
+      message: validation.isValid ? 'Preferences are valid' : 'Validation failed',
+      data: validation,
       timestamp: new Date().toISOString()
     })
   })

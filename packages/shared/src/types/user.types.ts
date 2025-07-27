@@ -28,6 +28,10 @@ export interface NotificationSettings {
   push: boolean
   budget: boolean
   bills: boolean
+  investments: boolean
+  goals: boolean
+  security: boolean
+  marketing: boolean
 }
 
 export interface UserSecurity {
@@ -63,6 +67,17 @@ export interface UpdatePreferencesData {
   notifications?: Partial<NotificationSettings>
 }
 
+export interface NotificationPreferencesUpdate {
+  email?: boolean
+  push?: boolean
+  budget?: boolean
+  bills?: boolean
+  investments?: boolean
+  goals?: boolean
+  security?: boolean
+  marketing?: boolean
+}
+
 export interface UpdateProfileData {
   firstName?: string
   lastName?: string
@@ -70,8 +85,36 @@ export interface UpdateProfileData {
   timezone?: Timezone
 }
 
+export interface CurrencyOption {
+  code: Currency
+  name: string
+  symbol: string
+}
+
+export interface DateFormatOption {
+  format: 'MM/DD/YYYY' | 'DD/MM/YYYY' | 'YYYY-MM-DD'
+  example: string
+  description: string
+}
+
+export interface TimezoneOption {
+  value: Timezone
+  label: string
+  offset: string
+}
+
 export interface PreferenceOptions {
-  currencies: Currency[]
-  dateFormats: ('MM/DD/YYYY' | 'DD/MM/YYYY' | 'YYYY-MM-DD')[]
-  timezones: Timezone[]
+  currencies: CurrencyOption[]
+  dateFormats: DateFormatOption[]
+  timezones: TimezoneOption[]
+}
+
+export interface LocalizedPreferences {
+  preferences: UserPreferences
+  timezone: Timezone
+  localizedOptions: {
+    currency?: CurrencyOption
+    dateFormat?: DateFormatOption
+    timezone?: TimezoneOption
+  }
 }

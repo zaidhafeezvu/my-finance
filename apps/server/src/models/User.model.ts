@@ -20,6 +20,10 @@ export interface IUser extends Document {
       push: boolean
       budget: boolean
       bills: boolean
+      investments: boolean
+      goals: boolean
+      security: boolean
+      marketing: boolean
     }
   }
   security: {
@@ -87,7 +91,7 @@ const userSchema = new Schema<IUser>({
       type: String,
       required: true,
       default: 'USD',
-      enum: ['USD', 'EUR', 'GBP', 'CAD', 'AUD']
+      enum: ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY', 'CHF', 'CNY', 'INR', 'BRL']
     },
     dateFormat: {
       type: String,
@@ -111,6 +115,22 @@ const userSchema = new Schema<IUser>({
       bills: {
         type: Boolean,
         default: true
+      },
+      investments: {
+        type: Boolean,
+        default: true
+      },
+      goals: {
+        type: Boolean,
+        default: true
+      },
+      security: {
+        type: Boolean,
+        default: true
+      },
+      marketing: {
+        type: Boolean,
+        default: false
       }
     }
   },
