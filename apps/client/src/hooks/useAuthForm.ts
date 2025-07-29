@@ -36,6 +36,7 @@ export const useAuthForm = (options: UseAuthFormOptions = {}): UseAuthFormReturn
 
       setIsLoading(true)
       setError(null)
+      setIsSuccess(false) // Reset success state on new submission
 
       const submission = (async () => {
         try {
@@ -45,6 +46,7 @@ export const useAuthForm = (options: UseAuthFormOptions = {}): UseAuthFormReturn
         } catch (err: any) {
           const errorMessage = handleApiError(err)
           setError(errorMessage)
+          setIsSuccess(false)
           options.onError?.(errorMessage)
         } finally {
           setIsLoading(false)
@@ -57,7 +59,9 @@ export const useAuthForm = (options: UseAuthFormOptions = {}): UseAuthFormReturn
     }
   }, [options])
 
-  const clearError = useCallback(() => setError(null), [])
+  const clearError = useCallback(() => {
+    setError(null)
+  }, [])
   
   const reset = useCallback(() => {
     setIsLoading(false)

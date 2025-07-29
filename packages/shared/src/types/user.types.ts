@@ -74,6 +74,16 @@ export interface PasswordResetResponse {
   resetToken?: string // Only included in development
 }
 
+export interface PasswordResetConfirmRequest {
+  token: string
+  newPassword: string
+}
+
+export interface PasswordResetConfirmResponse {
+  message: string
+  success: boolean
+}
+
 export interface EmailVerificationResponse {
   message: string
   verified: boolean

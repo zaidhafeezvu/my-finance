@@ -1,5 +1,5 @@
 import React, { ReactNode } from 'react'
-import '../pages/auth/Auth.css'
+import './Auth.css'
 
 interface AuthLayoutProps {
   title: string
