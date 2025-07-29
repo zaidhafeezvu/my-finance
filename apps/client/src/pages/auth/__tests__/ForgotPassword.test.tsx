@@ -140,9 +140,8 @@ describe('ForgotPassword Component', () => {
       expect(screen.getByText('Email not found')).toBeInTheDocument()
     })
   })
-})
-  it
-('handles rate limiting errors appropriately', async () => {
+
+  it('handles rate limiting errors appropriately', async () => {
     const user = userEvent.setup()
     const mockResetPassword = vi.mocked(authAPI.authAPI.resetPassword)
     mockResetPassword.mockRejectedValue({
