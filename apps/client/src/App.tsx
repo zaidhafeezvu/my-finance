@@ -1,11 +1,16 @@
-function App() {
+import React from 'react'
+import { Provider } from 'react-redux'
+import { store } from './store'
+import { AuthProvider } from './contexts/AuthContext'
+import AppRouter from './routes/AppRouter'
+
+const App: React.FC = () => {
   return (
-    <div className="App">
-      <header className="App-header">
-        <h1>Finance App</h1>
-        <p>Personal Finance Management Platform</p>
-      </header>
-    </div>
+    <Provider store={store}>
+      <AuthProvider>
+        <AppRouter />
+      </AuthProvider>
+    </Provider>
   )
 }
 

@@ -64,8 +64,11 @@
   - ~~Write tests for preference management~~
   - _Requirements: 1.1_
 
-- [ ] 4. Set up React frontend foundation
-- [ ] 4.1 Initialize React application with routing and state management
+- [-] 4. Set up React frontend foundation
+
+
+- [-] 4.1 Initialize React application with routing and state management
+
   - Configure React Router for client-side routing and navigation
   - Implement Redux Toolkit for state management with authentication slice
   - Create basic layout components (AppLayout, Navigation, Sidebar)
