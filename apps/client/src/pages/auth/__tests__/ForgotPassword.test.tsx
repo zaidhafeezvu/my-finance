@@ -12,6 +12,18 @@ vi.mock('../../../services/api', () => ({
   },
 }))
 
+// Mock the custom hooks
+vi.mock('../../../hooks/useAuthForm', () => ({
+  useAuthForm: () => ({
+    isLoading: false,
+    error: null,
+    isSuccess: false,
+    handleSubmit: (fn: any) => fn,
+    clearError: vi.fn(),
+    reset: vi.fn(),
+  }),
+}))
+
 describe('ForgotPassword Component', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -127,5 +139,74 @@ describe('ForgotPassword Component', () => {
     await waitFor(() => {
       expect(screen.getByText('Email not found')).toBeInTheDocument()
     })
+  })
+})
+  it
+('handles rate limiting errors appropriately', async () => {
+    const user = userEvent.setup()
+    const mockResetPassword = vi.mocked(authAPI.authAPI.resetPassword)
+    mockResetPassword.mockRejectedValue({
+      response: { 
+        status: 429,
+        headers: { 'retry-after': '60' },
+        data: { message: 'Too many requests' } 
+      }
+    })
+    
+    render(<ForgotPassword />)
+    
+    const emailInput = screen.getByLabelText('Email')
+    const submitButton = screen.getByRole('button', { name: 'Send Reset Link' })
+    
+    await user.type(emailInput, 'test@example.com')
+    await user.click(submitButton)
+    
+    await waitFor(() => {
+      expect(screen.getByText(/Too many requests/)).toBeInTheDocument()
+    })
+  })
+
+  it('prevents double submission', async () => {
+    const user = userEvent.setup()
+    const mockResetPassword = vi.mocked(authAPI.authAPI.resetPassword)
+    mockResetPassword.mockImplementation(() => new Promise(resolve => setTimeout(resolve, 100)))
+    
+    render(<ForgotPassword />)
+    
+    const emailInput = screen.getByLabelText('Email')
+    const submitButton = screen.getByRole('button', { name: 'Send Reset Link' })
+    
+    await user.type(emailInput, 'test@example.com')
+    
+    // Click submit button multiple times rapidly
+    await user.click(submitButton)
+    await user.click(submitButton)
+    await user.click(submitButton)
+    
+    // Should only be called once
+    await waitFor(() => {
+      expect(mockResetPassword).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  it('has proper accessibility attributes', () => {
+    render(<ForgotPassword />)
+    
+    const emailInput = screen.getByLabelText('Email')
+    const submitButton = screen.getByRole('button', { name: 'Send Reset Link' })
+    
+    expect(emailInput).toHaveAttribute('type', 'email')
+    expect(emailInput).toHaveAttribute('id', 'email')
+    expect(submitButton).toHaveAttribute('type', 'submit')
+  })
+
+  it('displays proper navigation links', () => {
+    render(<ForgotPassword />)
+    
+    const loginLink = screen.getByRole('link', { name: 'Sign in' })
+    const registerLink = screen.getByRole('link', { name: 'Sign up' })
+    
+    expect(loginLink).toHaveAttribute('href', '/login')
+    expect(registerLink).toHaveAttribute('href', '/register')
   })
 })

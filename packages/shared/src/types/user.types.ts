@@ -60,6 +60,32 @@ export interface AuthToken {
   expiresIn: number
 }
 
+export interface AuthResponse {
+  user: User
+  token: AuthToken
+}
+
+export interface PasswordResetRequest {
+  email: string
+}
+
+export interface PasswordResetResponse {
+  message: string
+  resetToken?: string // Only included in development
+}
+
+export interface EmailVerificationResponse {
+  message: string
+  verified: boolean
+}
+
+export interface ApiError {
+  message: string
+  code?: string
+  field?: string
+  statusCode: number
+}
+
 export interface UpdatePreferencesData {
   currency?: Currency
   dateFormat?: 'MM/DD/YYYY' | 'DD/MM/YYYY' | 'YYYY-MM-DD'
