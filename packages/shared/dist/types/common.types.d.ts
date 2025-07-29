@@ -29,6 +29,6 @@ export interface FilterOptions {
     categories?: string[];
     accounts?: string[];
 }
-export type Currency = 'USD' | 'EUR' | 'GBP' | 'CAD' | 'AUD';
+export type Currency = 'USD' | 'EUR' | 'GBP' | 'CAD' | 'AUD' | 'JPY' | 'CHF' | 'CNY' | 'INR' | 'BRL';
 export type Timezone = string;
 //# sourceMappingURL=common.types.d.ts.map

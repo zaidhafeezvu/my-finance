@@ -20,17 +20,14 @@ export interface UserPreferences {
     notifications: NotificationSettings;
 }
 export interface NotificationSettings {
-    email: {
-        budgetAlerts: boolean;
-        billReminders: boolean;
-        securityAlerts: boolean;
-        weeklyReports: boolean;
-    };
-    push: {
-        budgetAlerts: boolean;
-        billReminders: boolean;
-        securityAlerts: boolean;
-    };
+    email: boolean;
+    push: boolean;
+    budget: boolean;
+    bills: boolean;
+    investments: boolean;
+    goals: boolean;
+    security: boolean;
+    marketing: boolean;
 }
 export interface UserSecurity {
     mfaEnabled: boolean;
@@ -53,5 +50,56 @@ export interface AuthToken {
     accessToken: string;
     refreshToken: string;
     expiresIn: number;
+}
+export interface UpdatePreferencesData {
+    currency?: Currency;
+    dateFormat?: 'MM/DD/YYYY' | 'DD/MM/YYYY' | 'YYYY-MM-DD';
+    timezone?: Timezone;
+    notifications?: Partial<NotificationSettings>;
+}
+export interface NotificationPreferencesUpdate {
+    email?: boolean;
+    push?: boolean;
+    budget?: boolean;
+    bills?: boolean;
+    investments?: boolean;
+    goals?: boolean;
+    security?: boolean;
+    marketing?: boolean;
+}
+export interface UpdateProfileData {
+    firstName?: string;
+    lastName?: string;
+    phone?: string;
+    timezone?: Timezone;
+}
+export interface CurrencyOption {
+    code: Currency;
+    name: string;
+    symbol: string;
+}
+export interface DateFormatOption {
+    format: 'MM/DD/YYYY' | 'DD/MM/YYYY' | 'YYYY-MM-DD';
+    example: string;
+    description: string;
+}
+export interface TimezoneOption {
+    value: Timezone;
+    label: string;
+    offset: string;
+}
+export interface PreferenceOptions {
+    currencies: CurrencyOption[];
+    dateFormats: DateFormatOption[];
+    timezones: TimezoneOption[];
+}
+export interface LocalizedPreferences {
+    preferences: UserPreferences;
+    timezone: Timezone;
+    localizedOptions: {
+        currency?: CurrencyOption;
+        dateFormat?: DateFormatOption;
+        timezone?: TimezoneOption;
+    };
 }
 //# sourceMappingURL=user.types.d.ts.map
