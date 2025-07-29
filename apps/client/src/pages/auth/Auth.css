@@ -91,6 +91,21 @@
   text-align: center;
 }
 
+.success-message {
+  background-color: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+  padding: 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.success-message p {
+  margin: 0;
+}
+
 .auth-button {
   background-color: #3b82f6;
   color: white;

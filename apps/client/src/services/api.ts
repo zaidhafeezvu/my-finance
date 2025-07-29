@@ -3,7 +3,9 @@ import {
   User, 
   LoginCredentials, 
   UserRegistrationData, 
-  AuthToken
+  AuthToken,
+  UpdateProfileData,
+  UpdatePreferencesData
 } from '@finance-app/shared'
 
 // Import API endpoints directly to avoid build issues
@@ -116,6 +118,24 @@ export const authAPI = {
 
   verifyEmail: async (token: string): Promise<void> => {
     await api.post(API_ENDPOINTS.AUTH.VERIFY_EMAIL, { token })
+  },
+}
+
+// User API
+export const userAPI = {
+  updateProfile: async (data: UpdateProfileData): Promise<User> => {
+    const response = await api.put(API_ENDPOINTS.USERS.PROFILE, data)
+    return response.data
+  },
+
+  updatePreferences: async (data: UpdatePreferencesData): Promise<User> => {
+    const response = await api.put(API_ENDPOINTS.USERS.PREFERENCES, data)
+    return response.data
+  },
+
+  updateSecurity: async (data: any): Promise<User> => {
+    const response = await api.put(API_ENDPOINTS.USERS.SECURITY, data)
+    return response.data
   },
 }
 

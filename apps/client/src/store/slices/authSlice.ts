@@ -70,6 +70,30 @@ export const getCurrentUser = createAsyncThunk(
   }
 )
 
+export const resetPassword = createAsyncThunk(
+  'auth/resetPassword',
+  async (email: string, { rejectWithValue }) => {
+    try {
+      await authAPI.resetPassword(email)
+      return { message: 'Password reset email sent successfully' }
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to send reset email')
+    }
+  }
+)
+
+export const verifyEmail = createAsyncThunk(
+  'auth/verifyEmail',
+  async (token: string, { rejectWithValue }) => {
+    try {
+      await authAPI.verifyEmail(token)
+      return { message: 'Email verified successfully' }
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Email verification failed')
+    }
+  }
+)
+
 const authSlice = createSlice({
   name: 'auth',
   initialState,
@@ -149,6 +173,32 @@ const authSlice = createSlice({
         state.token = null
         state.isAuthenticated = false
         localStorage.removeItem('token')
+      })
+      // Reset password
+      .addCase(resetPassword.pending, (state) => {
+        state.isLoading = true
+        state.error = null
+      })
+      .addCase(resetPassword.fulfilled, (state) => {
+        state.isLoading = false
+        state.error = null
+      })
+      .addCase(resetPassword.rejected, (state, action) => {
+        state.isLoading = false
+        state.error = action.payload as string
+      })
+      // Verify email
+      .addCase(verifyEmail.pending, (state) => {
+        state.isLoading = true
+        state.error = null
+      })
+      .addCase(verifyEmail.fulfilled, (state) => {
+        state.isLoading = false
+        state.error = null
+      })
+      .addCase(verifyEmail.rejected, (state, action) => {
+        state.isLoading = false
+        state.error = action.payload as string
       })
   },
 })
