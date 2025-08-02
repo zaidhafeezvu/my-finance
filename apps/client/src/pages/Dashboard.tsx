@@ -7,7 +7,7 @@ const Dashboard: React.FC = () => {
   return (
     <div className="dashboard">
       <div className="dashboard-header">
-        <h1>Welcome back, {user?.profile.firstName}!</h1>
+        <h1>Welcome back, {user?.profile?.firstName || 'User'}!</h1>
         <p>Here's your financial overview</p>
       </div>
 
