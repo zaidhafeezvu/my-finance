@@ -1,8 +1,8 @@
 import axios, { AxiosInstance, AxiosResponse } from 'axios'
-import { 
-  User, 
-  LoginCredentials, 
-  UserRegistrationData, 
+import {
+  User,
+  LoginCredentials,
+  UserRegistrationData,
   AuthToken,
   UpdateProfileData,
   UpdatePreferencesData
@@ -11,17 +11,17 @@ import {
 // Import API endpoints directly to avoid build issues
 const API_ENDPOINTS = {
   AUTH: {
-    LOGIN: '/api/auth/login',
-    REGISTER: '/api/auth/register',
-    REFRESH: '/api/auth/refresh',
-    LOGOUT: '/api/auth/logout',
-    RESET_PASSWORD: '/api/auth/reset-password',
-    VERIFY_EMAIL: '/api/auth/verify-email',
+    LOGIN: '/api/v1/auth/login',
+    REGISTER: '/api/v1/auth/register',
+    REFRESH: '/api/v1/auth/refresh',
+    LOGOUT: '/api/v1/auth/logout',
+    RESET_PASSWORD: '/api/v1/auth/reset-password',
+    VERIFY_EMAIL: '/api/v1/auth/verify-email',
   },
   USERS: {
-    PROFILE: '/api/users/profile',
-    PREFERENCES: '/api/users/preferences',
-    SECURITY: '/api/users/security',
+    PROFILE: '/api/v1/user/profile',
+    PREFERENCES: '/api/v1/user/preferences',
+    SECURITY: '/api/v1/user/security',
   },
 } as const
 
@@ -56,17 +56,17 @@ api.interceptors.response.use(
 
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true
-      
+
       try {
         const refreshToken = localStorage.getItem('refreshToken')
         if (refreshToken) {
           const response = await api.post(API_ENDPOINTS.AUTH.REFRESH, {
             refreshToken,
           })
-          
+
           const { accessToken } = response.data
           localStorage.setItem('token', accessToken)
-          
+
           // Retry original request with new token
           originalRequest.headers.Authorization = `Bearer ${accessToken}`
           return api(originalRequest)
