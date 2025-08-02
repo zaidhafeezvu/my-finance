@@ -1,9 +1,10 @@
-import React from 'react'
+import React, { useState, useRef, useEffect, useCallback, memo } from 'react'
 import { useDispatch } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { logout } from '../../store/slices/authSlice'
 import { AppDispatch } from '../../store'
+import { getUserDisplayName } from '../../utils/userDisplay'
 import './Navigation.css'
 
 interface NavigationProps {
@@ -13,17 +14,61 @@ interface NavigationProps {
 const Navigation: React.FC<NavigationProps> = ({ onToggleSidebar }) => {
   const dispatch = useDispatch<AppDispatch>()
   const navigate = useNavigate()
-  const { user, isAuthenticated } = useAuth()
+  const { user, isAuthenticated, isLoading } = useAuth()
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
 
-  const handleLogout = () => {
-    dispatch(logout())
-    navigate('/login')
-  }
+  const handleLogout = useCallback(() => {
+    try {
+      dispatch(logout())
+      navigate('/login')
+      setIsDropdownOpen(false)
+    } catch (error) {
+      console.error('Logout failed:', error)
+      // Still navigate to login even if logout fails
+      navigate('/login')
+      setIsDropdownOpen(false)
+    }
+  }, [dispatch, navigate])
+
+  const toggleDropdown = useCallback(() => {
+    setIsDropdownOpen(!isDropdownOpen)
+  }, [isDropdownOpen])
+
+  const handleMenuItemClick = useCallback((action: () => void) => {
+    action()
+    setIsDropdownOpen(false)
+  }, [])
+
+  // Close dropdown when clicking outside or pressing Escape
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false)
+      }
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsDropdownOpen(false)
+      }
+    }
+
+    if (isDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+      document.addEventListener('keydown', handleKeyDown)
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [isDropdownOpen])
 
   return (
     <nav className="navigation">
       <div className="nav-left">
-        <button 
+        <button
           className="sidebar-toggle"
           onClick={onToggleSidebar}
           aria-label="Toggle sidebar"
@@ -36,25 +81,37 @@ const Navigation: React.FC<NavigationProps> = ({ onToggleSidebar }) => {
       </div>
 
       <div className="nav-right">
-        {isAuthenticated && user ? (
-          <div className="user-menu">
-            <span className="user-name">
-              {user.profile.firstName} {user.profile.lastName}
-            </span>
-            <div className="user-dropdown">
-              <button 
+        {isLoading ? (
+          <div className="nav-loading">Loading...</div>
+        ) : isAuthenticated && user && user.profile ? (
+          <div className="user-menu" ref={dropdownRef}>
+            <button
+              className="user-trigger"
+              onClick={toggleDropdown}
+              aria-expanded={isDropdownOpen}
+              aria-haspopup="true"
+            >
+              <span className="user-name">
+                {getUserDisplayName(user)}
+              </span>
+              <span className={`dropdown-arrow ${isDropdownOpen ? 'open' : ''}`}>
+                ▼
+              </span>
+            </button>
+            <div className={`user-dropdown ${isDropdownOpen ? 'open' : ''}`}>
+              <button
                 className="dropdown-item"
-                onClick={() => navigate('/profile')}
+                onClick={() => handleMenuItemClick(() => navigate('/profile'))}
               >
                 Profile
               </button>
-              <button 
+              <button
                 className="dropdown-item"
-                onClick={() => navigate('/settings')}
+                onClick={() => handleMenuItemClick(() => navigate('/settings'))}
               >
                 Settings
               </button>
-              <button 
+              <button
                 className="dropdown-item logout"
                 onClick={handleLogout}
               >
@@ -64,13 +121,13 @@ const Navigation: React.FC<NavigationProps> = ({ onToggleSidebar }) => {
           </div>
         ) : (
           <div className="auth-buttons">
-            <button 
+            <button
               className="btn btn-outline"
               onClick={() => navigate('/login')}
             >
               Login
             </button>
-            <button 
+            <button
               className="btn btn-primary"
               onClick={() => navigate('/register')}
             >
@@ -83,4 +140,4 @@ const Navigation: React.FC<NavigationProps> = ({ onToggleSidebar }) => {
   )
 }
 
-export default Navigation
+export default memo(Navigation)
