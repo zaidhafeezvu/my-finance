@@ -48,17 +48,13 @@ router.post('/register',
       timezone
     })
 
+    // Generate tokens for immediate login after registration
+    const authToken = await authService.login({ email, password })
+
     res.status(201).json({
       status: 'success',
       message: 'User registered successfully. Please check your email for verification.',
-      data: {
-        user: {
-          id: result.user._id,
-          email: result.user.email,
-          profile: result.user.profile,
-          emailVerified: result.user.security.emailVerified
-        }
-      },
+      data: authToken,
       timestamp: new Date().toISOString()
     })
   })

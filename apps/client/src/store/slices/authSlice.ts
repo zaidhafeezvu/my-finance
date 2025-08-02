@@ -123,6 +123,7 @@ const authSlice = createSlice({
       .addCase(loginUser.fulfilled, (state, action) => {
         state.isLoading = false
         state.token = action.payload.accessToken
+        state.user = action.payload.user
         state.isAuthenticated = true
         state.error = null
       })
@@ -139,6 +140,7 @@ const authSlice = createSlice({
       .addCase(registerUser.fulfilled, (state, action) => {
         state.isLoading = false
         state.token = action.payload.accessToken
+        state.user = action.payload.user
         state.isAuthenticated = true
         state.error = null
       })

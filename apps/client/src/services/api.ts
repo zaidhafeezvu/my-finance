@@ -87,18 +87,18 @@ api.interceptors.response.use(
 export const authAPI = {
   login: async (credentials: LoginCredentials): Promise<AuthToken> => {
     const response = await api.post(API_ENDPOINTS.AUTH.LOGIN, credentials)
-    return response.data
+    return response.data.data
   },
 
   register: async (userData: UserRegistrationData): Promise<AuthToken> => {
     const response = await api.post(API_ENDPOINTS.AUTH.REGISTER, userData)
-    return response.data
+    return response.data.data
   },
 
   refreshToken: async (): Promise<AuthToken> => {
     const refreshToken = localStorage.getItem('refreshToken')
     const response = await api.post(API_ENDPOINTS.AUTH.REFRESH, { refreshToken })
-    return response.data
+    return response.data.data
   },
 
   logout: async (): Promise<void> => {
@@ -109,7 +109,7 @@ export const authAPI = {
 
   getCurrentUser: async (): Promise<User> => {
     const response = await api.get(API_ENDPOINTS.USERS.PROFILE)
-    return response.data
+    return response.data.data
   },
 
   resetPassword: async (email: string): Promise<void> => {

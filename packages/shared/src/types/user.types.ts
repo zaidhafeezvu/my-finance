@@ -57,7 +57,16 @@ export interface LoginCredentials {
 export interface AuthToken {
   accessToken: string
   refreshToken: string
-  expiresIn: number
+  expiresIn?: number
+  user?: {
+    id: string
+    email: string
+    profile: {
+      firstName: string
+      lastName: string
+    }
+    emailVerified: boolean
+  }
 }
 
 export interface AuthResponse {
