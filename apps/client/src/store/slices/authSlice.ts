@@ -21,10 +21,14 @@ const initialState: AuthState = {
 // Async thunks
 export const loginUser = createAsyncThunk(
   'auth/login',
-  async (credentials: LoginCredentials, { rejectWithValue }) => {
+  async (credentials: LoginCredentials, { rejectWithValue, dispatch }) => {
     try {
       const response = await authAPI.login(credentials)
       localStorage.setItem('token', response.accessToken)
+
+      // Fetch full user data after successful login
+      await dispatch(getCurrentUser())
+
       return response
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || 'Login failed')
@@ -34,10 +38,14 @@ export const loginUser = createAsyncThunk(
 
 export const registerUser = createAsyncThunk(
   'auth/register',
-  async (userData: UserRegistrationData, { rejectWithValue }) => {
+  async (userData: UserRegistrationData, { rejectWithValue, dispatch }) => {
     try {
       const response = await authAPI.register(userData)
       localStorage.setItem('token', response.accessToken)
+
+      // Fetch full user data after successful registration
+      await dispatch(getCurrentUser())
+
       return response
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || 'Registration failed')
@@ -123,9 +131,9 @@ const authSlice = createSlice({
       .addCase(loginUser.fulfilled, (state, action) => {
         state.isLoading = false
         state.token = action.payload.accessToken
-        state.user = action.payload.user
         state.isAuthenticated = true
         state.error = null
+        // User data will be fetched by getCurrentUser thunk
       })
       .addCase(loginUser.rejected, (state, action) => {
         state.isLoading = false
@@ -140,9 +148,9 @@ const authSlice = createSlice({
       .addCase(registerUser.fulfilled, (state, action) => {
         state.isLoading = false
         state.token = action.payload.accessToken
-        state.user = action.payload.user
         state.isAuthenticated = true
         state.error = null
+        // User data will be fetched by getCurrentUser thunk
       })
       .addCase(registerUser.rejected, (state, action) => {
         state.isLoading = false

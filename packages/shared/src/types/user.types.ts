@@ -54,19 +54,21 @@ export interface LoginCredentials {
   password: string
 }
 
+export interface AuthUser {
+  id: string
+  email: string
+  profile: {
+    firstName: string
+    lastName: string
+  }
+  emailVerified: boolean
+}
+
 export interface AuthToken {
   accessToken: string
   refreshToken: string
   expiresIn?: number
-  user?: {
-    id: string
-    email: string
-    profile: {
-      firstName: string
-      lastName: string
-    }
-    emailVerified: boolean
-  }
+  user?: AuthUser
 }
 
 export interface AuthResponse {
